@@ -59,7 +59,7 @@ public class RealTimeDrive implements Runnable {
         DL2Motor = new TalonFX(1);
         DR1Motor = new TalonFX(2);
         DR2Motor = new TalonFX(3);
-        System.out.println("TalonFX 0-3 OK");
+        System.out.println("TalonFX 0-3 OK"); //might wanna remove these
         shooterMotor = new TalonSRX(4);
         loaderMotor = new TalonSRX(5);
         System.out.println("TalonSRX 4-5 OK");
@@ -72,8 +72,9 @@ public class RealTimeDrive implements Runnable {
         exitFlag = false; //clear flag on start
         while (!exitFlag) {
             long start = System.currentTimeMillis();
-            if(driverStick.getRawButton(4) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
-                this.alignEnabled = true;
+            
+            alignEnabled = driverStick.getRawButton(4);
+            if(alignEnabled && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
                 DL1Motor.set(ControlMode.PercentOutput, aimInput);
                 DL2Motor.set(ControlMode.PercentOutput, aimInput);
@@ -102,12 +103,13 @@ public class RealTimeDrive implements Runnable {
                 simOut("leftDrive", leftDrive);
                 simOut("rightDrive", rightDrive);
             }
+            
             shooterEnabled = driverStick.getRawButton(1);
             simOut("shooterEnabled", shooterEnabled);
             if (shooterEnabled) {
                 //set the shooter motor
                 if (alignDCOK) {shooterMotor.set(ControlMode.PercentOutput, shooterInput); simOut("shooterTarget", shooterInput);} else {
-                    //failsafe
+                    //failsafe needs to be updated
                     shooterMotor.set(ControlMode.PercentOutput, 0.5);
                     simOut("shooterTarget", shooterInput);
                 }
@@ -115,8 +117,8 @@ public class RealTimeDrive implements Runnable {
                 shooterInput = 0;
                 simOut("shooterTarget", shooterInput);
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
-                //try {Thread.sleep(8000);} catch (InterruptedException ie) {} //stall condition
             }
+            
             if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
     }
