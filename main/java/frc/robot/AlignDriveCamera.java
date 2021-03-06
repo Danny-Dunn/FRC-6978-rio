@@ -59,7 +59,7 @@ public class AlignDriveCamera implements Runnable {
         while(!exitFlag) {
             long start = System.currentTimeMillis();//marker for exec timing
             
-            if (this.RTDrive.shooterEnabled && tp.getBoolean(false)) {
+            if (RTDrive.shooterEnabled && tp.getBoolean(false)) {
                 //TODO: Shooter math
                 RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 if (!(RTDrive.getShooterVelocity() > RTDrive.shooterInput)) { //semi placeholder, needs target
@@ -69,7 +69,7 @@ public class AlignDriveCamera implements Runnable {
                 }
             }
             
-            if (this.RTDrive.alignEnabled) {
+            if (RTDrive.alignEnabled) {
                 //TODO: PID loop for alignment
                 //this needs to be a PID loop based on the 
             }
