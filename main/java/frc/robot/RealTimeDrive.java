@@ -78,8 +78,8 @@ public class RealTimeDrive implements Runnable {
                 //following is placeholder
                 DL1Motor.set(ControlMode.PercentOutput, aimInput);
                 DL2Motor.set(ControlMode.PercentOutput, aimInput);
-                DR1Motor.set(ControlMode.PercentOutput, aimInput);
-                DR2Motor.set(ControlMode.PercentOutput, aimInput);
+                DR1Motor.set(ControlMode.PercentOutput, -aimInput);
+                DR2Motor.set(ControlMode.PercentOutput, -aimInput);
             } else { //run the regular drive TODO: drive calculations
                 double deadzone = 0.2;
                 double y = driverStick.getY() * -1;
