@@ -73,7 +73,7 @@ public class RealTimeDrive implements Runnable {
         while (!exitFlag) {
             long start = System.currentTimeMillis();
             
-            alignEnabled = driverStick.getRawButton(4);
+            //alignEnabled = driverStick.getRawButton(4);
             if(alignEnabled && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
                 DL1Motor.set(ControlMode.PercentOutput, aimInput);
@@ -104,9 +104,9 @@ public class RealTimeDrive implements Runnable {
                 simOut("rightDrive", rightDrive);
             }
             
-            shooterEnabled = driverStick.getRawButton(1);
-            simOut("shooterEnabled", shooterEnabled);
-            if (shooterEnabled) {
+            //shooterEnabled = driverStick.getRawButton(1);
+            //simOut("shooterEnabled", shooterEnabled);
+            /*if (shooterEnabled) {
                 //set the shooter motor
                 if (alignDCOK) {shooterMotor.set(ControlMode.PercentOutput, shooterInput); simOut("shooterTarget", shooterInput);} else {
                     //failsafe needs to be updated
@@ -117,7 +117,7 @@ public class RealTimeDrive implements Runnable {
                 shooterInput = 0;
                 simOut("shooterTarget", shooterInput);
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
-            }
+            }*/
             
             if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
