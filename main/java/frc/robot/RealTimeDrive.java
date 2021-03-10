@@ -81,25 +81,25 @@ public class RealTimeDrive implements Runnable {
                 DR1Motor.set(ControlMode.PercentOutput, -aimInput);
                 DR2Motor.set(ControlMode.PercentOutput, -aimInput);
             } else { //run the regular drive TODO: drive calculations
-                double deadzone = 0.2;
+                double deadZone = 0.2;
                 double fullSpeed = 0.5;
 
                 double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
                 //deadzone calclations
-                x = (x < deadzone && x > -deadzone)? 0 : x;
-                if(x != 0.0) x = (x > 0.0)? x - deadzone : x + deadzone; //eliminate jump behaviour
+                x = (x < deadZone && x > -deadZone)? 0 : x;
+                if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
                 simOut("xval", x);
                 
-                y = (y < deadzone && y > -deadzone)? 0 : y;
-                if(y != 0.0) y = (y > 0.0)? y - deadzone : y + deadzone; //eliminate jump behaviour
+                y = (y < deadZone && y > -deadZone)? 0 : y;
+                if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                 simOut("yval", y);
 
                 double leftDrive = y + x;
                 double rightDrive = y - x;
                 
-                leftDrive = leftDrive / (1.0 - deadzone);
-                rightDrive = rightDrive / (1.0 - deadzone);
+                leftDrive = leftDrive / (1.0 - deadZone);
+                rightDrive = rightDrive / (1.0 - deadZone);
                 //speed scaling
                 leftDrive = leftDrive * fullSpeed; 
                 rightDrive = rightDrive * fullSpeed;
