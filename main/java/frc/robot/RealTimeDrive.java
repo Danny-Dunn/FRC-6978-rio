@@ -7,7 +7,7 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.networktables.NetworkTable;
 //import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-//import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; TODO: SmartDashboard
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; //TODO: SmartDashboard
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotBase;
 
@@ -32,6 +32,8 @@ public class RealTimeDrive implements Runnable {
 
     NetworkTable simTable;
 
+    //SmartDashboard sdb;
+
     public RealTimeDrive(Joystick driveStick) {
         //meta stuff
         this.driverStick = driveStick;
@@ -55,21 +57,21 @@ public class RealTimeDrive implements Runnable {
 
     public boolean setup() {
         //setup motors
-        DL1Motor = new TalonFX(0);
-        DL2Motor = new TalonFX(1);
-        DR1Motor = new TalonFX(2);
-        DR2Motor = new TalonFX(3);
-        System.out.println("TalonFX 0-3 OK"); //might wanna remove these
-        shooterMotor = new TalonSRX(4);
-        loaderMotor = new TalonSRX(5);
-        System.out.println("TalonSRX 4-5 OK");
+        DL1Motor = new TalonFX(1);
+        DL2Motor = new TalonFX(2);
+        DR1Motor = new TalonFX(3);
+        DR2Motor = new TalonFX(4);
+
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
         return true; //everything went fine
+        
     }
     
     public boolean exitFlag;
     public void run() { //might remove
+        
         exitFlag = false; //clear flag on start
+        SmartDashboard.putBoolean("RTDrive OK", true);
         while (!exitFlag) {
             long start = System.currentTimeMillis();
             
@@ -111,11 +113,13 @@ public class RealTimeDrive implements Runnable {
 
                 DL1Motor.set(ControlMode.PercentOutput, leftDrive);
                 DL2Motor.set(ControlMode.PercentOutput, leftDrive);
-                DR1Motor.set(ControlMode.PercentOutput, rightDrive);
-                DR2Motor.set(ControlMode.PercentOutput, rightDrive);
+                DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
+                DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
                 simOut("leftDrive", leftDrive);
                 simOut("rightDrive", rightDrive);
             }
+            
+            
             
             //shooterEnabled = driverStick.getRawButton(1);
             //simOut("shooterEnabled", shooterEnabled);
@@ -134,6 +138,7 @@ public class RealTimeDrive implements Runnable {
             
             if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
+        SmartDashboard.putBoolean("RTDrive OK", false);
     }
 }
 
