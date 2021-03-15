@@ -31,8 +31,9 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     driverStick = new Joystick(0);
+    
     RTDrive = new RealTimeDrive(driverStick);
-    AlignDC = new AlignDriveCamera(RTDrive);
+    AlignDC = new AlignDriveCamera(RTDrive, driverStick);
   }
 
   /**
