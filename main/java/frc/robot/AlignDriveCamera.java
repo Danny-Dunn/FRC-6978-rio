@@ -1,9 +1,15 @@
 package frc.robot;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotBase;
+
+import edu.wpi.first.wpilibj.Joystick;
+
 public class AlignDriveCamera implements Runnable {
     //limelight inputs
     NetworkTableEntry tp; //target present
@@ -15,8 +21,11 @@ public class AlignDriveCamera implements Runnable {
 
     long checkIn;
 
-    public AlignDriveCamera(RealTimeDrive RTDrive) {
+    Joystick driveStick;
+
+    public AlignDriveCamera(RealTimeDrive RTDrive, Joystick driveStick) {
         this.RTDrive = RTDrive;
+        this.driveStick = driveStick;
     }
     
     public void initCamera() { //setup nettables for the camera
@@ -56,12 +65,13 @@ public class AlignDriveCamera implements Runnable {
     public void run() {
         exitFlag = false;
         System.out.println("AlignDC: Start");
+        //intakeLiftMotor.set(ControlMode.PercentOutput ,0.1);
         while(!exitFlag) {
             long start = System.currentTimeMillis();//marker for exec timing
             
-            if (this.RTDrive.shooterEnabled && tp.getBoolean(false)) {
+            if (driveStick.getRawButton(1) && tp.getBoolean(false)) {
                 //TODO: Shooter math
-                RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
+                //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 if (!(RTDrive.getShooterVelocity() > RTDrive.shooterInput)) { //semi placeholder, needs target
                     //TODO: shooter verification
                 } else {
@@ -69,11 +79,10 @@ public class AlignDriveCamera implements Runnable {
                 }
             }
             
-            if (this.RTDrive.alignEnabled) {
+            if (RTDrive.alignEnabled) {
                 //TODO: PID loop for alignment
                 //this needs to be a PID loop based on the 
             }
-            
             checkIn = System.currentTimeMillis();
             //throws InterruptedException {Thread.sleep(10);}
             if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
