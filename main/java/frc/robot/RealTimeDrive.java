@@ -8,6 +8,7 @@ import edu.wpi.first.networktables.NetworkTable;
 //import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; //TODO: SmartDashboard
+import edu.wpi.first.wpilibj.trajectory.constraint.TrajectoryConstraint.MinMax;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotBase;
 
@@ -76,12 +77,18 @@ public class RealTimeDrive implements Runnable {
             long start = System.currentTimeMillis();
             
             //alignEnabled = driverStick.getRawButton(4);
-            if(alignEnabled && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
+            if(driverStick.getRawButton(8) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
+                float minSpeed = 0.08f;
+                aimInput = (aimInput > 0.3)? 0.3 : aimInput;
+
+                aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
+                aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
+
                 DL1Motor.set(ControlMode.PercentOutput, aimInput);
                 DL2Motor.set(ControlMode.PercentOutput, aimInput);
-                DR1Motor.set(ControlMode.PercentOutput, -aimInput);
-                DR2Motor.set(ControlMode.PercentOutput, -aimInput);
+                DR1Motor.set(ControlMode.PercentOutput, aimInput);
+                DR2Motor.set(ControlMode.PercentOutput, aimInput);
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
                 double fullSpeed = 0.5;
@@ -92,6 +99,7 @@ public class RealTimeDrive implements Runnable {
                 x = (x < deadZone && x > -deadZone)? 0 : x;
                 if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
                 simOut("xval", x);
+                x = x * 0.7;
                 
                 y = (y < deadZone && y > -deadZone)? 0 : y;
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
