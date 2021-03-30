@@ -3,6 +3,7 @@ package frc.robot;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Intake {
     Joystick driveStick; //joystick(only used for button inputs)
@@ -35,7 +36,8 @@ public class Intake {
             
             if(driveStick.getRawButtonPressed(6)) targetState = true; //lift button
             else if(driveStick.getRawButtonPressed(5)) targetState = false; //drop button
-
+            intakeLiftMotor.set(ControlMode.PercentOutput, 0.1);
+            /*
             if(targetState) {
                 if(realState) intakeLiftMotor.set(ControlMode.PercentOutput, -0.1);
                 else intakeLiftMotor.set(ControlMode.PercentOutput, -0.5);
@@ -51,7 +53,8 @@ public class Intake {
             } else {
                 intakeMotor.set(ControlMode.PercentOutput, 0);
             }
-
+            */
+            SmartDashboard.putNumber("Lift Position", intakeLiftMotor.getSelectedSensorPosition());
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
     }
