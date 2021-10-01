@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 //import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; //TODO: SmartDashboard
+import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.wpilibj.Joystick;
 
 import java.lang.Thread;
@@ -18,9 +19,11 @@ public class Robot extends TimedRobot {
   
   RealTimeDrive RTDrive;
   AlignDriveCamera AlignDC;
+  Intake Intak;
 
   Thread RTDrive_thread;
   Thread AlignDC_thread;
+  Thread Intake_thread;
 
   //SmartDashboard sdb = new SmartDashboard();
 
@@ -34,6 +37,7 @@ public class Robot extends TimedRobot {
     
     RTDrive = new RealTimeDrive(driverStick);
     AlignDC = new AlignDriveCamera(RTDrive, driverStick);
+    Intak = new Intake(driverStick);
   }
 
   /**
@@ -59,12 +63,18 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
     RTDrive.setup();
+    Intak.init();
     AlignDC.initCamera();
+
+    System.out.println("test?");
+    
     
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
-    AlignDC_thread = new Thread(AlignDC, "AlignDC");
+    //Intake_thread = new Thread(Intak, "Intake");
+    //AlignDC_thread = new Thread(AlignDC, "AlignDC");
     RTDrive_thread.start();
-    AlignDC_thread.start();
+    //AlignDC_thread.start();
+    //Intake_thread.start();
   }
 
   /** This function is called periodically during operator control. */
@@ -81,6 +91,7 @@ public class Robot extends TimedRobot {
   public void disabledInit() {
     RTDrive.exitFlag = true;
     AlignDC.exitFlag = true;
+    //Intak.exitFlag = true;
   }
 
   /** This function is called periodically when disabled. */
