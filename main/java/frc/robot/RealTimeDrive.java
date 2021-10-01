@@ -64,8 +64,9 @@ public class RealTimeDrive implements Runnable {
         DR2Motor = new TalonFX(4);
 
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
+        System.out.println("[RtDrive] Start OK");
         return true; //everything went fine
-        
+
     }
     
     public boolean exitFlag;
@@ -91,7 +92,7 @@ public class RealTimeDrive implements Runnable {
                 DR2Motor.set(ControlMode.PercentOutput, aimInput);
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.5;
+                double fullSpeed = 0.35;
 
                 double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
