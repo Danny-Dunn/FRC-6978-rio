@@ -71,9 +71,9 @@ public class Robot extends TimedRobot {
     
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
     //Intake_thread = new Thread(Intak, "Intake");
-    //AlignDC_thread = new Thread(AlignDC, "AlignDC");
+    AlignDC_thread = new Thread(AlignDC, "AlignDC");
     RTDrive_thread.start();
-    //AlignDC_thread.start();
+    AlignDC_thread.start();
     //Intake_thread.start();
   }
 

@@ -90,14 +90,14 @@ public class AlignDriveCamera implements Runnable {
                 //TODO: Shooter math
                 //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 //shooterMotor.set(ControlMode.Velocity, 2300); //works at 2300 zone 3 actual 2200
-                shooterMotor.set(ControlMode.Velocity, 2700); //testing
+                shooterMotor.set(ControlMode.PercentOutput, 0.28); //testing
                 //shooterMotor.set(conr)
                 
-            } else if (driveStick.getRawButton(2)) {
+            } /*else if (driveStick.getRawButton(2)) {
                 shooterMotor.set(ControlMode.Velocity, 1000);
             } else if (driveStick.getRawButton(5)) {
                 shooterMotor.set(ControlMode.Velocity, 3150);
-            } else {
+            }*/ else {
                 shooterMotor.set(ControlMode.PercentOutput, 0);
                 
             }
