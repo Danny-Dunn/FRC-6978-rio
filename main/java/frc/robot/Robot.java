@@ -6,7 +6,8 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 //import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-//import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; TODO: SmartDashboard
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; //TODO: SmartDashboard
+import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.wpilibj.Joystick;
 
 import java.lang.Thread;
@@ -18,9 +19,13 @@ public class Robot extends TimedRobot {
   
   RealTimeDrive RTDrive;
   AlignDriveCamera AlignDC;
+  Intake Intak;
+  PneumaticController pneumatics;
 
   Thread RTDrive_thread;
   Thread AlignDC_thread;
+  Thread Intake_thread;
+  Thread pneumatics_thread;
 
   //SmartDashboard sdb = new SmartDashboard();
 
@@ -34,6 +39,8 @@ public class Robot extends TimedRobot {
     
     RTDrive = new RealTimeDrive(driverStick);
     AlignDC = new AlignDriveCamera(RTDrive, driverStick);
+    Intak = new Intake(driverStick);
+    //pneumatics = new PneumaticController(driverStick);
   }
 
   /**
@@ -58,19 +65,31 @@ public class Robot extends TimedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
+    driverStick = new Joystick(0);
     RTDrive.setup();
+    Intak.init();
     AlignDC.initCamera();
+    //pneumatics.init();
+
+    System.out.println("test?");
+    
     
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
+    Intake_thread = new Thread(Intak, "Intake");
     AlignDC_thread = new Thread(AlignDC, "AlignDC");
+    //pneumatics_thread = new Thread(pneumatics, "Pneumatics");
     RTDrive_thread.start();
     AlignDC_thread.start();
+    Intake_thread.start();
+    //pneumatics_thread.start();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    RTDrive.alignDCOK = (AlignDC.checkIn > (System.currentTimeMillis() - 800)); //if no response for 800
+    RTDrive.alignDCOK = true; //if no response for 800
+    SmartDashboard.putNumber("shooterVelocity", AlignDC.shooterMotor.getSelectedSensorVelocity());
+    SmartDashboard.putNumber("shooterCurrent", AlignDC.shooterMotor.getStatorCurrent());
     try {Thread.sleep(10);} catch (InterruptedException ie) {} //chec 10 times per second
   }
 
@@ -79,6 +98,8 @@ public class Robot extends TimedRobot {
   public void disabledInit() {
     RTDrive.exitFlag = true;
     AlignDC.exitFlag = true;
+    Intak.exitFlag = true;
+    //pneumatics.exitFlag = true;
   }
 
   /** This function is called periodically when disabled. */
