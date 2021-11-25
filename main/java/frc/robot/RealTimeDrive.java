@@ -25,6 +25,7 @@ public class RealTimeDrive implements Runnable {
     
     Joystick driverStick;
     public double aimInput;
+    public double aimInputy;
     public double shooterInput;
 
     boolean alignEnabled;
@@ -78,21 +79,27 @@ public class RealTimeDrive implements Runnable {
             long start = System.currentTimeMillis();
             
             //alignEnabled = driverStick.getRawButton(4);
-            if(driverStick.getRawButton(8) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
+            if(driverStick.getRawButton(7) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
                 float minSpeed = 0.08f;
                 aimInput = (aimInput > 0.3)? 0.3 : aimInput;
+                aimInputy = (aimInputy > 0.25)? 0.25 : aimInputy;
 
                 aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
                 aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
 
-                DL1Motor.set(ControlMode.PercentOutput, aimInput);
-                DL2Motor.set(ControlMode.PercentOutput, aimInput);
-                DR1Motor.set(ControlMode.PercentOutput, aimInput);
-                DR2Motor.set(ControlMode.PercentOutput, aimInput);
+                double leftDrive = aimInput + aimInputy;
+                double rightDrive = -aimInput + aimInputy;
+
+                DL1Motor.set(ControlMode.PercentOutput, leftDrive);
+                DL2Motor.set(ControlMode.PercentOutput, leftDrive);
+                DR1Motor.set(ControlMode.PercentOutput, -rightDrive); //inverting
+                DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
+                simOut("leftDrive", leftDrive);
+                simOut("rightDrive", rightDrive);
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.35;
+                double fullSpeed = 0.5;
 
                 double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
@@ -128,6 +135,7 @@ public class RealTimeDrive implements Runnable {
                 simOut("rightDrive", rightDrive);
             }
             
+            simOut("rightin", driverStick.getX());
             
             
             //shooterEnabled = driverStick.getRawButton(1);
