@@ -33,21 +33,33 @@ public class Intake implements Runnable{
     public void run() {
         exitFlag = false;
         while(!exitFlag) {
-            realState = (intakeLiftMotor.getSelectedSensorPosition() > catchPoint);
+            
             //true = up
             
-            if(driveStick.getRawButtonPressed(6)) targetState = true; //lift button
-            else if(driveStick.getRawButtonPressed(5)) targetState = false; //drop button
+            if(driveStick.getRawButton(6)){ 
+                targetState = true;
+                intakeLiftMotor.set(ControlMode.PercentOutput, 0.40);
+            } //lift button
+            else if(driveStick.getRawButton(5)) {
+                intakeLiftMotor.set(ControlMode.PercentOutput, -0.2);
+                targetState = false;
+            } //drop button
+            else {
+                if(targetState) { // go up
+                    intakeLiftMotor.set(ControlMode.PercentOutput, 0.1);
+                    //if(realState) intakeLiftMotor.set(ControlMode.PercentOutput, 0.1); //carriage is up
+                    //else intakeLiftMotor.set(ControlMode.PercentOutput, 0.7);
+                } else { //go down
+                    intakeLiftMotor.set(ControlMode.PercentOutput, -0.1);
+                    //if(realState) intakeLiftMotor.set(ControlMode.PercentOutput, -0.4); //carriage is up
+                    //else if(intakeLiftMotor.getSelectedSensorPosition() < -660) intakeLiftMotor.set(ControlMode.PercentOutput, 0.1); //carriage is all stop(hold)
+                    //else intakeLiftMotor.set(ControlMode.PercentOutput, 0.0); //carriage is downward in motion(slow down)
+                }
+            }
+            realState = targetState;
             //intakeLiftMotor.set(ControlMode.PercentOutput, 0.1);
             
-            if(targetState) { // go up
-                if(realState) intakeLiftMotor.set(ControlMode.PercentOutput, 0.1); //carriage is up
-                else intakeLiftMotor.set(ControlMode.PercentOutput, 0.7);
-            } else { //go down
-                if(realState) intakeLiftMotor.set(ControlMode.PercentOutput, -0.4); //carriage is up
-                else if(intakeLiftMotor.getSelectedSensorPosition() < -700) intakeLiftMotor.set(ControlMode.PercentOutput, 0.1); //carriage is all stop(hold)
-                else intakeLiftMotor.set(ControlMode.PercentOutput, 0.0); //carriage is downward in motion(slow down)
-            }
+            
 
             if(driveStick.getRawButton(4)) {
                 intakeMotor.set(ControlMode.PercentOutput, -0.5);
