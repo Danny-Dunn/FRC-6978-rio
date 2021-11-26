@@ -4,13 +4,16 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 
+import com.kauailabs.navx.frc.AHRS;
+
 import edu.wpi.first.networktables.NetworkTable;
 //import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; //TODO: SmartDashboard
-import edu.wpi.first.wpilibj.trajectory.constraint.TrajectoryConstraint.MinMax;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.drive.Vector2d;
+import edu.wpi.first.wpilibj.SPI;
 
 //simOuts are for simulation purposes only, these can be removed in final robot code to improve efficiency
 
@@ -34,7 +37,40 @@ public class RealTimeDrive implements Runnable {
 
     NetworkTable simTable;
 
+    Vector2d currentPosition;
+    double oldLeftDrivePosition;
+    double oldRightDrivePosition;
+    double oldYaw;
+    double ticksPerCentimetre = 385.47; //hopefully correct
+    AHRS navX;
+
     //SmartDashboard sdb;
+
+    Vector2d calcGraphTransition(Vector2d lastPosition, double distance, double yaw) {
+		double radius = (distance) / ticksPerCentimetre;
+		double radians = Math.toRadians(yaw);
+		//calc the new point
+        lastPosition.y = lastPosition.y + (radius * Math.sin(radians));
+        lastPosition.x = lastPosition.x + (radius * Math.cos(radians));
+        return lastPosition;
+	}
+
+    void advanceTracking() {
+        double leftPosition = DR1Motor.getSelectedSensorPosition();
+        double rightPosition = DR1Motor.getSelectedSensorPosition();
+        double yaw = navX.getYaw();
+        currentPosition = calcGraphTransition(currentPosition, ((leftPosition - oldLeftDrivePosition) + (rightPosition - oldRightDrivePosition)) / 2, (yaw + oldYaw) / 2);
+        oldYaw = yaw;
+        oldLeftDrivePosition = leftPosition;
+        oldRightDrivePosition = rightPosition;
+        //TODO: Maybe remove these as they may cost performance
+        SmartDashboard.putNumber("trackX", currentPosition.x);
+        SmartDashboard.putNumber("trackY", currentPosition.y);
+    }
+
+    void calibrateTracking() {
+        navX.calibrate();
+    }
 
     public RealTimeDrive(Joystick driveStick) {
         //meta stuff
@@ -66,8 +102,11 @@ public class RealTimeDrive implements Runnable {
 
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
         System.out.println("[RtDrive] Start OK");
-        return true; //everything went fine
 
+        currentPosition = new Vector2d(0, 0);
+        navX = new AHRS(SPI.Port.kMXP);
+
+        return true; //everything went fine
     }
     
     public boolean exitFlag;
@@ -76,8 +115,10 @@ public class RealTimeDrive implements Runnable {
         exitFlag = false; //clear flag on start
         SmartDashboard.putBoolean("RTDrive OK", true);
         while (!exitFlag) {
-            long start = System.currentTimeMillis();
+            long start = System.nanoTime();
             
+            advanceTracking();
+
             //alignEnabled = driverStick.getRawButton(4);
             if(driverStick.getRawButton(7) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
@@ -131,11 +172,11 @@ public class RealTimeDrive implements Runnable {
                 DL2Motor.set(ControlMode.PercentOutput, leftDrive);
                 DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
                 DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
+                //TODO: Determine if detailed SmartDasboard output is ok on performance
                 simOut("leftDrive", leftDrive);
                 simOut("rightDrive", rightDrive);
             }
-            
-            simOut("rightin", driverStick.getX());
+
             
             
             //shooterEnabled = driverStick.getRawButton(1);
@@ -153,7 +194,14 @@ public class RealTimeDrive implements Runnable {
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
             }*/
             
-            if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
+            long elapsedTime = System.nanoTime() - start;
+            simOut("RTDrive last time", (double)elapsedTime);
+            if(elapsedTime > 1000000) {
+                System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
+            }
+
+            //TODO: improve RTDrive thread timing
+            try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
     }
