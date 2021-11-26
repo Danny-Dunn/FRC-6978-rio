@@ -98,7 +98,7 @@ public class AlignDriveCamera implements Runnable {
             long start = System.currentTimeMillis();//marker for exec timing
             
             if (driveStick.getRawButton(8)) {
-                //TODO: Shooter math
+                //TODO: Full shooter distance calculation
                 //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 //shooterMotor.set(ControlMode.Velocity, 2300); //works at 2300 zone 3 actual 2200
                 shooterMotor.set(ControlMode.PercentOutput, 0.35); //testing
@@ -114,7 +114,6 @@ public class AlignDriveCamera implements Runnable {
             }
             
             if (driveStick.getRawButton(3)) {
-                //TODO: Shooter math
                 //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 loaderMotor.set(ControlMode.PercentOutput, 0.4);
                 
