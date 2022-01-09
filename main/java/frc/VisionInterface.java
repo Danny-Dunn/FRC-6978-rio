@@ -2,25 +2,38 @@ package frc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 //import java.net;
 import java.net.Socket;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+//link protocol 0.1 compliant
 public class VisionInterface implements Runnable {
+    
+    class LocationProperty {
+        public double x;
+        public double y;
+        public double z;
+    }
+    
+    class SizeProperty {
+        public double radius;
+    }
+    
+    class ObjectCreateReport {
+        public LocationProperty location;
+        public SizeProperty size;
+    }
+    
     Socket sock;
-    InputStream piIn;
-
-    ByteBuffer reportBuf;
-
-    int currentPacketLength;
-    int currentCaputuredLength;
+    DataInputStream diStream;
 
     enum ReceiveState {
         offline,
-        await,
+        running,
         inframe,
         failed
     };
@@ -29,27 +42,22 @@ public class VisionInterface implements Runnable {
 
     void initComms() {
         try {
-            sock = new Socket("vcomp.local", 5660);
-            piIn = sock.getInputStream();
-            currentState = ReceiveState.await;
+            sock = new Socket("vcomp.local", 5801);
+            diStream = new DataInputStream(sock.getInputStream());
+            currentState = ReceiveState.running;
+            System.out.println("[VInterface] VC comm up");
         } catch(Exception e) {
-            System.out.println("[VInterface] RPi comm init failed!");
+            System.out.println("[VInterface] VC link init failed!");
             currentState = ReceiveState.failed;
         }
     }
 
-    void catchPacket() {
-        try {
-            currentCaputuredLength = reportBuf.position() + 1;
-            if (piIn.available() > 0) {
-                reportBuf.put(piIn.readAllBytes());
-            }
-        } catch (Exception e) {
-            System.out.println("[VInterface] Error reading while packet in-flight shutting down");
-            currentState = ReceiveState.failed;
-        }
+    int frameID;
+    int reportID;
+    int reportType;
+    int propCount;
+    int propType;
 
-    }
 
     public void run() {
         while(true) {
@@ -59,28 +67,30 @@ public class VisionInterface implements Runnable {
                 case offline:
                     initComms();
                     break;
-                case await:
+                case running:
                     try{
-                        if(piIn.available() > 2) { //begin packet
-                            reportBuf.position(0);
-                            reportBuf.put(piIn.readAllBytes());
-                            currentCaputuredLength = reportBuf.position() + 1;
-                            reportBuf.position(0);
-                            if(reportBuf.get() == 0x5b) {
-                                currentPacketLength = reportBuf.get();
-                                currentState = ReceiveState.inframe;
-                            } else {
-                                System.out.println("[VInterface] Preamble incorrect");
-                            }
+                        frameID = diStream.readInt();
+                        reportID = diStream.readInt();
+                        reportType = diStream.readByte();
+                        propCount = diStream.readByte();
+                        switch(reportType) {
+                            case 2: //object_create
+                                ObjectCreateReport report = new ObjectCreateReport();
+                                
+                                report.location = new LocationProperty();
+                                report.location.x = diStream.readDouble();
+                                report.location.y = diStream.readDouble();
+                                report.location.z = diStream.readDouble();
+
+                                report.size = new SizeProperty();
+                                report.size.radius = diStream.readDouble();
+                                SmartDashboard.putNumber("Report radius", report.size.radius);
+                                break;
                         }
+                        
                     } catch(Exception e) {
-                        System.out.println("[VInterface] Transaction failed or malformed");
-                        reportBuf.position(0);
-                        currentState = ReceiveState.await;
+                        
                     }
-                    break;
-                case inframe:
-                    catchPacket();
                     break;
             }
         }
