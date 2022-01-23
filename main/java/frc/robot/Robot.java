@@ -5,9 +5,12 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.I2C.Port;
 //import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.SPI;
+import com.kauailabs.navx.frc.AHRS;
 
 import java.lang.Thread;
 
@@ -26,6 +29,8 @@ public class Robot extends TimedRobot {
   Thread Intake_thread;
   Thread pneumatics_thread;
 
+  AHRS navX;
+
   //SmartDashboard sdb = new SmartDashboard();
 
   /**
@@ -36,9 +41,12 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     driverStick = new Joystick(0);
     
-    RTDrive = new RealTimeDrive(driverStick);
+    navX = new AHRS(Port.kMXP);
+    RTDrive = new RealTimeDrive(driverStick, navX);
     AlignDC = new AlignDriveCamera(RTDrive, driverStick);
     Intak = new Intake(driverStick);
+
+    
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -66,7 +74,7 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     driverStick = new Joystick(0);
     RTDrive.setup();
-    Intak.init();
+    //Intak.init();
     AlignDC.initCamera();
     //pneumatics.init();
 
@@ -74,18 +82,19 @@ public class Robot extends TimedRobot {
     
     
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
-    Intake_thread = new Thread(Intak, "Intake");
+    //Intake_thread = new Thread(Intak, "Intake");
     AlignDC_thread = new Thread(AlignDC, "AlignDC");
     //pneumatics_thread = new Thread(pneumatics, "Pneumatics");
     RTDrive_thread.start();
     AlignDC_thread.start();
-    Intake_thread.start();
+    //Intake_thread.start();
     //pneumatics_thread.start();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
+    //TODO: REMOVE SAFETY BYPASS, NOT PRODUCTION SAFE
     RTDrive.alignDCOK = true; //if no response for 800
     SmartDashboard.putNumber("shooterVelocity", AlignDC.shooterMotor.getSelectedSensorVelocity());
     SmartDashboard.putNumber("shooterCurrent", AlignDC.shooterMotor.getStatorCurrent());
