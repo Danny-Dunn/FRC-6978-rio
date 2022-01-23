@@ -41,7 +41,10 @@ public class RealTimeDrive implements Runnable {
     double oldLeftDrivePosition;
     double oldRightDrivePosition;
     double oldYaw;
-    double ticksPerCentimetre = 385.47; //hopefully correct
+    double absyaw;
+    double realyaw;
+    double ticksPerCentimetre = 1042.18; //new gearboxes
+    //double ticksPerCentimetre = 385.47; //old gearboxes
     AHRS navX;
 
     //SmartDashboard sdb;
@@ -56,16 +59,26 @@ public class RealTimeDrive implements Runnable {
 	}
 
     void advanceTracking() {
-        double leftPosition = DR1Motor.getSelectedSensorPosition();
-        double rightPosition = DR1Motor.getSelectedSensorPosition();
-        double yaw = navX.getYaw();
-        currentPosition = calcGraphTransition(currentPosition, ((leftPosition - oldLeftDrivePosition) + (rightPosition - oldRightDrivePosition)) / 2, (yaw + oldYaw) / 2);
-        oldYaw = yaw;
+        leftPosition = DL1Motor.getSelectedSensorPosition();
+        rightPosition = -DR1Motor.getSelectedSensorPosition();
+        realyaw = navX.getAngle() - angleOffset;
+        //double realrealyawImeanitthistime = navX.getYaw();
+        absyaw = realyaw % 360;
+        //double roll = navX.getRoll();
+        //double pitch = navX.getPitch();
+        currentPosition = calcGraphTransition(currentPosition, ((leftPosition - oldLeftDrivePosition) + (rightPosition - oldRightDrivePosition)) / 2, (absyaw + oldYaw) / 2);
+        oldYaw = absyaw;
         oldLeftDrivePosition = leftPosition;
         oldRightDrivePosition = rightPosition;
         //TODO: Maybe remove these as they may cost performance
         SmartDashboard.putNumber("trackX", currentPosition.x);
         SmartDashboard.putNumber("trackY", currentPosition.y);
+        SmartDashboard.putNumber("DistanceL", leftPosition);
+        SmartDashboard.putNumber("DistanceR", rightPosition);
+        //SmartDashboard.putNumber("RealRealYaw", realrealyawImeanitthistime);
+        SmartDashboard.putNumber("Yaw", realyaw);
+        SmartDashboard.putNumber("absYaw", absyaw);
+        //SmartDashboard.putNumber("Pitch", pitch);
     }
 
     void calibrateTracking() {
