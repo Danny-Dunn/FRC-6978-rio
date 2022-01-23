@@ -69,7 +69,19 @@ public class RealTimeDrive implements Runnable {
     }
 
     void calibrateTracking() {
-        navX.calibrate();
+        //navX.calibrate();
+        currentPosition.x = 0;
+        currentPosition.y = 0;
+        DL1Motor.setSelectedSensorPosition(0);
+        DL2Motor.setSelectedSensorPosition(0);
+        DR1Motor.setSelectedSensorPosition(0);
+        DR2Motor.setSelectedSensorPosition(0);
+        double cumulative = 0;
+        for(int i = 0; i < 450; i++) {
+            cumulative += navX.getAngle();
+        }
+        angleOffset = cumulative / 450;
+        SmartDashboard.putNumber("offset", angleOffset);
     }
 
     public RealTimeDrive(Joystick driveStick) {
