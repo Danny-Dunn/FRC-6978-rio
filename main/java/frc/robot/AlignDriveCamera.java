@@ -11,6 +11,7 @@ import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.RealTimeDrive.DriveMode;
 import edu.wpi.first.wpilibj.Joystick;
 
 
@@ -37,6 +38,8 @@ public class AlignDriveCamera implements Runnable {
     TalonSRX intakeLiftMotor;
 
     double startTimeStamp;
+
+    int autoState;
 
     public AlignDriveCamera(RealTimeDrive RTDrive, Joystick driveStick) {
         this.RTDrive = RTDrive;
@@ -65,6 +68,8 @@ public class AlignDriveCamera implements Runnable {
         shooterMotor.setSensorPhase(false);
 
         shooterMotor.config_kP(0, 14);
+
+        autoState = 0;
         //SmartDashboard.putNumber("shooterP", 7);
     }
     
@@ -101,7 +106,7 @@ public class AlignDriveCamera implements Runnable {
                 //TODO: Full shooter distance calculation
                 //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
                 //shooterMotor.set(ControlMode.Velocity, 2300); //works at 2300 zone 3 actual 2200
-                shooterMotor.set(ControlMode.PercentOutput, 0.35); //testing
+                //shooterMotor.set(ControlMode.PercentOutput, 0.35); //testing
                 //shooterMotor.set(conr)
                 
             } /*else if (driveStick.getRawButton(2)) {
@@ -109,21 +114,21 @@ public class AlignDriveCamera implements Runnable {
             } else if (driveStick.getRawButton(5)) {
                 shooterMotor.set(ControlMode.Velocity, 3150);
             }*/ else {
-                shooterMotor.set(ControlMode.PercentOutput, 0);
+                //shooterMotor.set(ControlMode.PercentOutput, 0);
                 
             }
             
             if (driveStick.getRawButton(3)) {
                 //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
-                loaderMotor.set(ControlMode.PercentOutput, 0.4);
+                //loaderMotor.set(ControlMode.PercentOutput, 0.4);
                 
             } else {
-                loaderMotor.set(ControlMode.PercentOutput, 0);
+                //loaderMotor.set(ControlMode.PercentOutput, 0);
                 
             }
 
-            if (driveStick.getRawButton(7)) {
-                double error = tx.getDouble(0) /*- 6.24*/;
+            /*if (driveStick.getRawButton(7)) {
+                double error = tx.getDouble(0) - 6.24;
                 SmartDashboard.putNumber("Xerror", error);
                 double gain = 0.045;
                 double gainI = 0.02;
@@ -146,7 +151,7 @@ public class AlignDriveCamera implements Runnable {
                     p = error * gain;
                 } else { 
                     p = error * gain2;
-                }*/
+                }
                 p = error * gain;
 
                 motorOut = i + p;
@@ -180,7 +185,7 @@ public class AlignDriveCamera implements Runnable {
                     p = error * gain;
                 } else { 
                     p = error * gain2;
-                }*/
+                }
                 p = error * gain;
 
                 motorOut = i + p;
@@ -189,10 +194,33 @@ public class AlignDriveCamera implements Runnable {
                 SmartDashboard.putNumber("camYPresult", p);
                 SmartDashboard.putNumber("camYIresult", i);
 
-            }
+            }*/
 
-            SmartDashboard.putNumber("shooterVelocity", shooterMotor.getSelectedSensorVelocity());
-            SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
+            if(driveStick.getRawButtonPressed(7)) {
+                autoState = 0;
+            } else if(driveStick.getRawButton(7)) {//test auto code
+                switch(autoState) {
+                    case 0: //rotate to angle
+                        RTDrive.targetAngle = 90.0;
+                        RTDrive.setDriveMode(DriveMode.rotate);
+                        autoState++;
+                        break;
+                    case 1:
+                        if(RTDrive.autoConditionSatisfied) {
+                            autoState++;
+                        }
+                        break;
+                    case 2:
+                        RTDrive.targetDistance = 100.0; //100cm forward
+                        RTDrive.setDriveMode(DriveMode.distance);
+                        autoState++;
+                        break;
+                }
+            }
+            SmartDashboard.putNumber("autostate", autoState);
+
+            //SmartDashboard.putNumber("shooterVelocity", shooterMotor.getSelectedSensorVelocity());
+            //SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
 
             checkIn = System.currentTimeMillis();
             //throws InterruptedException {Thread.sleep(10);}

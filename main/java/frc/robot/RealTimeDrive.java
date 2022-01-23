@@ -40,6 +40,8 @@ public class RealTimeDrive implements Runnable {
     Vector2d currentPosition;
     double oldLeftDrivePosition;
     double oldRightDrivePosition;
+    double leftPosition;
+    double rightPosition;
     double oldYaw;
     double absyaw;
     double realyaw;
@@ -47,7 +49,47 @@ public class RealTimeDrive implements Runnable {
     //double ticksPerCentimetre = 385.47; //old gearboxes
     AHRS navX;
 
+    double angleOffset;
+
+    public enum DriveMode {
+        rotate,
+        distance,
+        stop
+    };
+
+    DriveMode mode;
+    double targetAngle;
+    double targetAngleOffset;
+    double targetDistance;
+    double leftOffset;
+    double rightOffset;
+    boolean autoConditionSatisfied;
+
     //SmartDashboard sdb;
+
+    void setDriveMode(DriveMode dm) {
+        mode = dm;
+        autoConditionSatisfied = false;
+        switch(dm) {
+            case rotate:
+                targetAngleOffset = realyaw;
+                //targetAngle = targetAngle - targetAngleOffset;
+                double absDelta = targetAngle - absyaw;
+                if(absDelta > 180) {
+                    absDelta = absDelta - 360;
+                } else if(absDelta < -180) {
+                    absDelta = absDelta + 360;
+                }
+                targetAngle = absDelta;
+                System.out.println("Turning " + targetAngle);
+                SmartDashboard.putNumber("targetOffset", targetAngleOffset);
+                SmartDashboard.putNumber("absdelta", absDelta);
+                break;
+            case distance:
+                leftOffset = leftPosition;
+                rightOffset = rightPosition;
+        }
+    }
 
     Vector2d calcGraphTransition(Vector2d lastPosition, double distance, double yaw) {
 		double radius = (distance) / ticksPerCentimetre;
@@ -97,20 +139,28 @@ public class RealTimeDrive implements Runnable {
         SmartDashboard.putNumber("offset", angleOffset);
     }
 
-    public RealTimeDrive(Joystick driveStick) {
+    public RealTimeDrive(Joystick driveStick, AHRS navX) {
         //meta stuff
         this.driverStick = driveStick;
+        this.navX = navX;
         this.aimInput = 0;
+        SmartDashboard.putNumber("angleP", 0.009);
+        SmartDashboard.putNumber("distanceP", 0.002);
+        SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
     //output functions for simulation
     public void simOut(String tag, Double value) {
         if (!RobotBase.isReal()) {
             simTable.getEntry(tag).setDouble(value);
+        } else {
+            SmartDashboard.putNumber(tag, value);
         }
     }
     public void simOut(String tag, Boolean value) {
         if (!RobotBase.isReal()) {
             simTable.getEntry(tag).setBoolean(value);
+        } else {
+            SmartDashboard.putBoolean(tag, value);
         }
     }
 
@@ -129,7 +179,10 @@ public class RealTimeDrive implements Runnable {
         System.out.println("[RtDrive] Start OK");
 
         currentPosition = new Vector2d(0, 0);
-        navX = new AHRS(SPI.Port.kMXP);
+        //navX = new AHRS(SPI.Port.kMXP);
+        
+        calibrateTracking();
+        System.out.println("[RtDrive] Calibrated tracking with angle offset " + angleOffset);
 
         return true; //everything went fine
     }
@@ -143,13 +196,37 @@ public class RealTimeDrive implements Runnable {
             long start = System.nanoTime();
             
             advanceTracking();
+            if(driverStick.getRawButtonPressed(8)) {
+                calibrateTracking();
+            }
 
             //alignEnabled = driverStick.getRawButton(4);
             if(driverStick.getRawButton(7) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
-                float minSpeed = 0.08f;
-                aimInput = (aimInput > 0.3)? 0.3 : aimInput;
-                aimInputy = (aimInputy > 0.25)? 0.25 : aimInputy;
+                float minSpeed = 0.06f;
+                double delta = 0.0;
+                switch(mode) {
+                    case rotate:
+                        delta = targetAngle - (realyaw - targetAngleOffset);
+                        double angleP = SmartDashboard.getNumber("angleP", 0.002);
+        
+                        aimInput = delta * angleP;
+                        
+                        //
+                        aimInputy = 0;
+                        autoConditionSatisfied = (Math.abs(delta) < 1.0); //auto is satisfied if distance
+                        break;
+                    case distance:
+                        delta = targetDistance - (((leftPosition - leftOffset)+(rightPosition - rightOffset)/2) / ticksPerCentimetre);
+                        double distanceP = SmartDashboard.getNumber("distanceP", 0.002);
+                        aimInput = 0;
+                        aimInputy = delta * distanceP;
+                }
+                
+                SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
+
+                aimInput = (aimInput > 1)? 1 : aimInput;
+                aimInputy = (aimInputy > 0.5)? 0.5 : aimInputy;
 
                 aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
                 aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
@@ -163,12 +240,17 @@ public class RealTimeDrive implements Runnable {
                 DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
                 simOut("leftDrive", leftDrive);
                 simOut("rightDrive", rightDrive);
+                SmartDashboard.putNumber("targetDelta", delta);
+                
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.5;
+                double fullSpeed = 0.4;
 
                 double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
+                double aparam = 0.1;
+                double bparam = 0.8;
+                x = (aparam * (x * x * x)) + (bparam * x);
                 //deadzone calclations
                 x = (x < deadZone && x > -deadZone)? 0 : x;
                 if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
@@ -193,13 +275,17 @@ public class RealTimeDrive implements Runnable {
                 leftDrive = (leftDrive < -fullSpeed)? -fullSpeed : leftDrive;
                 rightDrive = (rightDrive < -fullSpeed)? -fullSpeed : rightDrive;
 
+                  
                 DL1Motor.set(ControlMode.PercentOutput, leftDrive);
                 DL2Motor.set(ControlMode.PercentOutput, leftDrive);
                 DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
                 DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
+                
                 //TODO: Determine if detailed SmartDasboard output is ok on performance
                 simOut("leftDrive", leftDrive);
                 simOut("rightDrive", rightDrive);
+                double delta = realyaw - targetAngleOffset;
+                SmartDashboard.putNumber("targetDelta", realyaw - targetAngleOffset);
             }
 
             
@@ -222,7 +308,7 @@ public class RealTimeDrive implements Runnable {
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 1000000) {
-                System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
+                //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
 
             //TODO: improve RTDrive thread timing
