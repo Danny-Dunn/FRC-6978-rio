@@ -246,7 +246,13 @@ public class RealTimeDrive implements Runnable {
                 double deadZone = 0.2;
                 double fullSpeed = 0.4;
 
-                double y = driverStick.getY() * -1;
+
+                //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
+                double Lt = driverStick.getRawAxis(2);
+                double Rt = driverStick.getRawAxis(3);
+                double y = Lt  - Rt;
+
+                //double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
                 double aparam = 0.1;
                 double bparam = 0.8;
