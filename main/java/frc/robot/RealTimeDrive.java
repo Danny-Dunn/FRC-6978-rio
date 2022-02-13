@@ -255,12 +255,12 @@ public class RealTimeDrive implements Runnable {
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.4;
+                double fullSpeed = 0.95;
 
 
                 //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
-                double Lt = driverStick.getRawAxis(2);
-                double Rt = driverStick.getRawAxis(3);
+                double Lt = driverStick.getRawAxis(3);
+                double Rt = driverStick.getRawAxis(2);
                 double y = Lt  - Rt;
 
                 //double y = driverStick.getY() * -1;
