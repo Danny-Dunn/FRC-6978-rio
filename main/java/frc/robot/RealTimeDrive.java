@@ -317,6 +317,16 @@ public class RealTimeDrive implements Runnable {
                 //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
 
+            SmartDashboard.putNumber("DL1 Temp", DL1Motor.getTemperature());
+            SmartDashboard.putNumber("DL2 Temp", DL2Motor.getTemperature());
+            SmartDashboard.putNumber("DR1 Temp", DR1Motor.getTemperature());
+            SmartDashboard.putNumber("DR2 Temp", DR2Motor.getTemperature());
+
+            SmartDashboard.putNumber("DL1 Current", DL1Motor.getStatorCurrent());
+            SmartDashboard.putNumber("DL2 Current", DL2Motor.getStatorCurrent());
+            SmartDashboard.putNumber("DR1 Current", DR1Motor.getStatorCurrent());
+            SmartDashboard.putNumber("DR2 Current", DR2Motor.getStatorCurrent());
+
             //TODO: improve RTDrive thread timing
             try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
