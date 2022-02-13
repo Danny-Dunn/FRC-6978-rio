@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj.SPI;
 
 //simOuts are for simulation purposes only, these can be removed in final robot code to improve efficiency
 
-public class RealTimeDrive implements Runnable {
+public class RealTimeDrive implements Runnable, ServiceableModule {
     //motors
     TalonFX DL1Motor;
     TalonFX DL2Motor;

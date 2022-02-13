@@ -5,7 +5,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class Climb implements Runnable{
+public class Climb implements Runnable, ServiceableModule {
     Joystick driveStick;
     Joystick operatorStick;
 
@@ -31,7 +31,7 @@ public class Climb implements Runnable{
 
 
 
-    public void init() {
+    public boolean init() {
         CFLMotor = new TalonSRX(20);
         CFRMotor = new TalonSRX(21);
         CBLMotor = new TalonSRX(22);
@@ -41,6 +41,7 @@ public class Climb implements Runnable{
         CBLMotor.setSelectedSensorPosition(0);
         CBRMotor.setSelectedSensorPosition(0);
         System.out.println("[Climb] finished initialisation");
+        return true;
     }
 
     /*void climbPID(double goal) {
@@ -59,6 +60,10 @@ public class Climb implements Runnable{
         output = -output;
         //climbMotor.set(ControlMode.PercentOutput, output);
     }*/
+
+    public void standby(boolean takeConfigOptions) {
+
+    }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
