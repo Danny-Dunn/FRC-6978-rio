@@ -1,10 +1,7 @@
 package frc;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+
 //import java.net;
 import java.net.Socket;
 
@@ -91,6 +88,8 @@ public class VisionInterface implements Runnable {
                     } catch(Exception e) {
                         
                     }
+                    break;
+                default:
                     break;
             }
         }

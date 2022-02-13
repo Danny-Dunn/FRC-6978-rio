@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.drive.Vector2d;
-import edu.wpi.first.wpilibj.SPI;
 
 //simOuts are for simulation purposes only, these can be removed in final robot code to improve efficiency
 
@@ -100,6 +99,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 eIntegral = 0;
                 leftOffset = leftPosition;
                 rightOffset = rightPosition;
+            default:
+                break;
         }
     }
 
@@ -273,6 +274,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                         aimInput = 0;
                         aimInputy = delta * distanceP;
                         autoConditionSatisfied = (Math.abs(delta) < 4.0);
+                    case stop:
+                        aimInput = 0;
+                        aimInputy = 0;
                 }
                 
 
