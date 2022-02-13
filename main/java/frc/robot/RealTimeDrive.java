@@ -191,7 +191,7 @@ public class RealTimeDrive implements Runnable {
         calibrateTracking();
         System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
 
-        System.out.println("[RTDrive] Initialised module");
+        System.out.println("[RTDrive] finished initialisation");
 
         return true; //everything went fine??
     }
@@ -224,7 +224,7 @@ public class RealTimeDrive implements Runnable {
 
     public boolean exitFlag;
     public void run() { //might remove
-        
+        System.out.println("[RTDrive] entered independent service");
         exitFlag = false; //clear flag on start
         SmartDashboard.putBoolean("RTDrive OK", true);
         while (!exitFlag) {
@@ -355,6 +355,7 @@ public class RealTimeDrive implements Runnable {
             try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
+        System.out.println("[RTDrive] left independent service");
     }
 }
 

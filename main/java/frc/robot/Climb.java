@@ -36,11 +36,11 @@ public class Climb implements Runnable{
         CFRMotor = new TalonSRX(21);
         CBLMotor = new TalonSRX(22);
         CBRMotor = new TalonSRX(23);
-        System.out.println("[Climb] Start OK");
         CFLMotor.setSelectedSensorPosition(0);
         CFRMotor.setSelectedSensorPosition(0);
         CBLMotor.setSelectedSensorPosition(0);
         CBRMotor.setSelectedSensorPosition(0);
+        System.out.println("[Climb] finished initialisation");
     }
 
     /*void climbPID(double goal) {
@@ -65,6 +65,7 @@ public class Climb implements Runnable{
         exitFlag = false;
         backState = false;
         frontState = false;
+        System.out.println("[Climb] entered independent service");
         while(!exitFlag) {
             
             if(operatorStick.getRawButton(5)){ //front pull 
@@ -103,5 +104,7 @@ public class Climb implements Runnable{
             
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
+        System.out.println("[Climb] left independent service");
+
     }
 }

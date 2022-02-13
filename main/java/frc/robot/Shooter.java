@@ -23,13 +23,14 @@ public class Shooter implements Runnable{
 
     public void init() {
         shooterMotor = new TalonSRX(10);
-        System.out.println("[Climb] Start OK");
         shooterMotor.setSelectedSensorPosition(0);
+        System.out.println("[Shooter] finished initialisation");
     }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
         exitFlag = false;
+        System.out.println("[Shooter] entered independent service");
         while(!exitFlag) {
             
             if(driveStick.getRawButton(6)){ 
@@ -42,5 +43,6 @@ public class Shooter implements Runnable{
             SmartDashboard.putNumber("Shooter Speed", shooterMotor.getSelectedSensorVelocity());
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
+        System.out.println("[Shooter] left independent service");
     }
 }

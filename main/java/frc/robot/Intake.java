@@ -25,13 +25,14 @@ public class Intake implements Runnable{
         intakeLiftMotor = new TalonSRX(16);
         intakeMotor = new TalonSRX(17);
         intakeLiftMotor.setSelectedSensorPosition(0);
-        System.out.println("[Intake] Start OK");
+        System.out.println("[Intake] finished initialisation");
     }
 
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
         exitFlag = false;
+        System.out.println("[Intake] entered independent service");
         while(!exitFlag) {
             
             //true = up
@@ -72,5 +73,6 @@ public class Intake implements Runnable{
             SmartDashboard.putNumber("Lift Position", intakeLiftMotor.getSelectedSensorPosition());
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
+        System.out.println("[Intake] left independent service");
     }
 }
