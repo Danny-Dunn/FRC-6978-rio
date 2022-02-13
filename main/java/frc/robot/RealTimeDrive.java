@@ -144,8 +144,9 @@ public class RealTimeDrive implements Runnable {
         this.driverStick = driveStick;
         this.navX = navX;
         this.aimInput = 0;
-        SmartDashboard.putNumber("angleP", 0.009);
-        SmartDashboard.putNumber("distanceP", 0.002);
+        SmartDashboard.putNumber("angleP", 0.0018);
+        SmartDashboard.putNumber("angleP2", 0.0144);
+        SmartDashboard.putNumber("distanceP", 0.016);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
     //output functions for simulation
@@ -205,22 +206,32 @@ public class RealTimeDrive implements Runnable {
                 //following is placeholder
                 float minSpeed = 0.06f;
                 double delta = 0.0;
+                double maxTurning = 0.6;
                 switch(mode) {
                     case rotate:
                         delta = targetAngle - (realyaw - targetAngleOffset);
                         double angleP = SmartDashboard.getNumber("angleP", 0.002);
-        
-                        aimInput = delta * angleP;
-                        
+                        double angleP2 = SmartDashboard.getNumber("angleP2", 0.002);
+
+                        if(delta < 130.0) {
+                            aimInput = delta * angleP2;
+                        } else {
+                            aimInput = delta * angleP;
+                        }
+                        aimInput = (aimInput > maxTurning)? maxTurning: aimInput;
+                        aimInput = (aimInput < -maxTurning)? -maxTurning: aimInput;
                         //
                         aimInputy = 0;
-                        autoConditionSatisfied = (Math.abs(delta) < 1.0); //auto is satisfied if distance
+
+                        autoConditionSatisfied = (Math.abs(delta) < 1.0) && (navX.getRate() < 0.005); //auto is satisfied if almost still
+                        SmartDashboard.putNumber("gyroRate", navX.getRate());
                         break;
                     case distance:
-                        delta = targetDistance - (((leftPosition - leftOffset)+(rightPosition - rightOffset)/2) / ticksPerCentimetre);
+                        delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
                         double distanceP = SmartDashboard.getNumber("distanceP", 0.002);
                         aimInput = 0;
                         aimInputy = delta * distanceP;
+                        autoConditionSatisfied = (Math.abs(delta) < 4.0);
                 }
                 
                 SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
