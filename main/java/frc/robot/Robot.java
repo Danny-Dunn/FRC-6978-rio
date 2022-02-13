@@ -18,16 +18,21 @@ import java.lang.Thread;
 public class Robot extends TimedRobot {
   
   Joystick driverStick;
+  Joystick operatorStick;
   
   RealTimeDrive RTDrive;
   AlignDriveCamera AlignDC;
   Intake Intak;
   PneumaticController pneumatics;
+  Climb climb;
+  Shooter shooter;
 
   Thread RTDrive_thread;
   Thread AlignDC_thread;
   Thread Intake_thread;
   Thread pneumatics_thread;
+  Thread climb_thread;
+  Thread shooter_thread;
 
   AHRS navX;
 
@@ -40,11 +45,14 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     driverStick = new Joystick(0);
+    operatorStick = new Joystick(1);
     
     navX = new AHRS(Port.kMXP);
     RTDrive = new RealTimeDrive(driverStick, navX);
     AlignDC = new AlignDriveCamera(RTDrive, driverStick);
     Intak = new Intake(driverStick);
+    climb = new Climb(driverStick, operatorStick);
+    shooter = new Shooter(driverStick);
 
     
     //pneumatics = new PneumaticController(driverStick);
@@ -77,6 +85,8 @@ public class Robot extends TimedRobot {
     //Intak.init();
     AlignDC.initCamera();
     //pneumatics.init();
+    climb.init();
+    shooter.init();
 
     System.out.println("test?");
     
@@ -84,9 +94,13 @@ public class Robot extends TimedRobot {
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
     //Intake_thread = new Thread(Intak, "Intake");
     AlignDC_thread = new Thread(AlignDC, "AlignDC");
+    climb_thread = new Thread(climb, "Climb");
+    shooter_thread = new Thread(shooter, "Shooter");
     //pneumatics_thread = new Thread(pneumatics, "Pneumatics");
     RTDrive_thread.start();
     AlignDC_thread.start();
+    climb_thread.start();
+    shooter_thread.start();
     //Intake_thread.start();
     //pneumatics_thread.start();
   }
@@ -107,6 +121,8 @@ public class Robot extends TimedRobot {
     RTDrive.exitFlag = true;
     AlignDC.exitFlag = true;
     Intak.exitFlag = true;
+    climb.exitFlag = true;
+    shooter.exitFlag = true;
     //pneumatics.exitFlag = true;
   }
 
