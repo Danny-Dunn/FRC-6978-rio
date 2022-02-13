@@ -94,19 +94,7 @@ public class AlignDriveCamera implements Runnable {
             ty.setDouble(0.0);
         }
 
-        //shooterMotor = new TalonSRX(24);
-        //loaderMotor = new TalonSRX(25);
-
-        //intakeLiftMotor = new TalonSRX(16);
-
-        //shooterMotor.setInverted(true);
-        //loaderMotor.setInverted(true);
-        //shooterMotor.setSensorPhase(false);
-
-        //shooterMotor.config_kP(0, 14);
-
         autoState = 0;
-        //SmartDashboard.putNumber("shooterP", 7);
     }
     
     double calcDistance(double camY) {
@@ -136,101 +124,6 @@ public class AlignDriveCamera implements Runnable {
         System.out.println("AlignDC: Start");
         //intakeLiftMotor.set(ControlMode.PercentOutput ,0.1);
         while(!exitFlag) {
-            long start = System.currentTimeMillis();//marker for exec timing
-            
-            if (driveStick.getRawButton(8)) {
-                //TODO: Full shooter distance calculation
-                //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
-                //shooterMotor.set(ControlMode.Velocity, 2300); //works at 2300 zone 3 actual 2200
-                //shooterMotor.set(ControlMode.PercentOutput, 0.35); //testing
-                //shooterMotor.set(conr)
-                
-            } /*else if (driveStick.getRawButton(2)) {
-                shooterMotor.set(ControlMode.Velocity, 1000);
-            } else if (driveStick.getRawButton(5)) {
-                shooterMotor.set(ControlMode.Velocity, 3150);
-            }*/ else {
-                //shooterMotor.set(ControlMode.PercentOutput, 0);
-                
-            }
-            
-            if (driveStick.getRawButton(3)) {
-                //RTDrive.shooterInput = this.calcDistance(ty.getDouble(0.0)); //velocity
-                //loaderMotor.set(ControlMode.PercentOutput, 0.4);
-                
-            } else {
-                //loaderMotor.set(ControlMode.PercentOutput, 0);
-                
-            }
-
-            /*if (driveStick.getRawButton(7)) {
-                double error = tx.getDouble(0) - 6.24;
-                SmartDashboard.putNumber("Xerror", error);
-                double gain = 0.045;
-                double gainI = 0.02;
-                double motorOut;
-                double i;
-                double p;
-
-                if(!pidPreviousState) { //reset on new button
-                    pidXTimeStamp = System.currentTimeMillis();
-                    pidPreviousState = true;
-                }
-
-                if(Math.abs(error) < 0.2) { //reset on align
-                    pidXTimeStamp = System.currentTimeMillis();
-                }
-
-                i = (System.currentTimeMillis() - startTimeStamp) * gainI;
-
-                /*if(error > 0.4) {
-                    p = error * gain;
-                } else { 
-                    p = error * gain2;
-                }
-                p = error * gain;
-
-                motorOut = i + p;
-                
-                RTDrive.aimInputy = -motorOut;
-                SmartDashboard.putNumber("camXPresult", p);
-                SmartDashboard.putNumber("camXIresult", i);
-            }
-
-            if (driveStick.getRawButton(7)) {
-                double error = ty.getDouble(0);
-                SmartDashboard.putNumber("Yerror", error);
-                double gain = 0.045;
-                double gainI = 0.02;
-                double motorOut;
-                double i;
-                double p;
-
-                if(!pidPreviousState) { //reset on new button
-                    pidYTimeStamp = System.currentTimeMillis();
-                    pidPreviousState = true;
-                }
-
-                if(Math.abs(error) < 0.2) { //reset on align
-                    pidYTimeStamp = System.currentTimeMillis();
-                }
-
-                i = (System.currentTimeMillis() - startTimeStamp) * gainI;
-
-                /*if(error > 0.4) {
-                    p = error * gain;
-                } else { 
-                    p = error * gain2;
-                }
-                p = error * gain;
-
-                motorOut = i + p;
-                
-                //RTDrive.aimInputy = -motorOut;
-                SmartDashboard.putNumber("camYPresult", p);
-                SmartDashboard.putNumber("camYIresult", i);
-
-            }*/
 
             if(driveStick.getRawButtonPressed(7)) {
                 autoState = 0;
@@ -264,6 +157,9 @@ public class AlignDriveCamera implements Runnable {
                                 break;
                             case RotateToAngle:
                                 autoState = 2;
+                            default:
+                                pointNum++;
+                                break;
                         }
                         break;
                     case 1: // start driving to point
@@ -335,20 +231,6 @@ public class AlignDriveCamera implements Runnable {
                 SmartDashboard.putNumber("DeltaX", dx);
                 SmartDashboard.putNumber("DeltaY", dy);
             }
-
-            //if(driveStick.getRawButtonPressed(5)) {
-                //RTDrive.targetAngle = 90;
-                //RTDrive.setDriveMode(DriveMode.rotate);
-            //}
-            //if(driveStick.getRawButtonPressed(6)) {
-                //RTDrive.targetAngle = 0;
-                //RTDrive.setDriveMode(DriveMode.rotate);
-            //} 
-
-            //SmartDashboard.putNumber("autostate", autoState);
-
-            //SmartDashboard.putNumber("shooterVelocity", shooterMotor.getSelectedSensorVelocity());
-            //SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
 
             checkIn = System.currentTimeMillis();
             //throws InterruptedException {Thread.sleep(10);}
