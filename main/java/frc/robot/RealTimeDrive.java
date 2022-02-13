@@ -73,6 +73,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     double angleP;
     double angleP2;
     double distanceP;
+    double angleI;
+    double eIntegral;
+    long angleTS;
 
     void setDriveMode(DriveMode dm) {
         mode = dm;
@@ -88,11 +91,13 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     absDelta = absDelta + 360;
                 }
                 targetAngle = absDelta;
+                eIntegral = 0;
                 System.out.println("Turning " + targetAngle);
                 SmartDashboard.putNumber("targetOffset", targetAngleOffset);
                 SmartDashboard.putNumber("absdelta", absDelta);
                 break;
             case distance:
+                eIntegral = 0;
                 leftOffset = leftPosition;
                 rightOffset = rightPosition;
         }
@@ -152,7 +157,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         this.navX = navX;
         this.aimInput = 0;
         SmartDashboard.putNumber("angleP", 0.0018);
-        SmartDashboard.putNumber("angleP2", 0.0144);
+        SmartDashboard.putNumber("angleP2", 0.0104);
+        SmartDashboard.putNumber("angleI", 0.00084);
         SmartDashboard.putNumber("distanceP", 0.016);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
@@ -218,9 +224,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("gyroRate", navX.getRate());
 
         if(takeConfigOptions) {
-            angleP = SmartDashboard.getNumber("angleP", 0.002);
-            angleP2 = SmartDashboard.getNumber("angleP2", 0.002);
-
+            angleP = SmartDashboard.getNumber("angleP", 0.0015);
+            angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
+            angleI = SmartDashboard.getNumber("angleI", 0.00084);
             distanceP = SmartDashboard.getNumber("distanceP", 0.002);
         }
     }
@@ -248,11 +254,13 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     case rotate:
                         delta = targetAngle - (realyaw - targetAngleOffset);
 
-                        if(delta < 130.0) {
-                            aimInput = delta * angleP2;
-                        } else {
-                            aimInput = delta * angleP;
-                        }
+                        double deltaT = (System.nanoTime() - angleTS) / 10000;
+                        angleTS = System.nanoTime();
+
+                        eIntegral += delta * deltaT;
+
+                        aimInput = (delta * angleP) + (eIntegral * angleI);
+
                         aimInput = (aimInput > maxTurning)? maxTurning: aimInput;
                         aimInput = (aimInput < -maxTurning)? -maxTurning: aimInput;
                         //
