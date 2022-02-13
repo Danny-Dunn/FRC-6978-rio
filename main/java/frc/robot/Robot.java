@@ -110,10 +110,8 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    //TODO: REMOVE SAFETY BYPASS, NOT PRODUCTION SAFE
     RTDrive.alignDCOK = true; //if no response for 800
-    SmartDashboard.putNumber("shooterVelocity", AlignDC.shooterMotor.getSelectedSensorVelocity());
-    SmartDashboard.putNumber("shooterCurrent", AlignDC.shooterMotor.getStatorCurrent());
+    shooter.standby(true);
     try {Thread.sleep(10);} catch (InterruptedException ie) {} //chec 10 times per second
   }
 

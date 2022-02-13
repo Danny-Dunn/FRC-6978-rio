@@ -1,13 +1,7 @@
 package frc.robot;
 
-
-import java.util.Date;
-
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-
-import org.opencv.ml.RTrees;
-
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -83,16 +77,16 @@ public class AlignDriveCamera implements Runnable {
             ty.setDouble(0.0);
         }
 
-        shooterMotor = new TalonSRX(24);
-        loaderMotor = new TalonSRX(25);
+        //shooterMotor = new TalonSRX(24);
+        //loaderMotor = new TalonSRX(25);
 
-        intakeLiftMotor = new TalonSRX(16);
+        //intakeLiftMotor = new TalonSRX(16);
 
-        shooterMotor.setInverted(true);
-        loaderMotor.setInverted(true);
-        shooterMotor.setSensorPhase(false);
+        //shooterMotor.setInverted(true);
+        //loaderMotor.setInverted(true);
+        //shooterMotor.setSensorPhase(false);
 
-        shooterMotor.config_kP(0, 14);
+        //shooterMotor.config_kP(0, 14);
 
         autoState = 0;
         //SmartDashboard.putNumber("shooterP", 7);
@@ -225,11 +219,14 @@ public class AlignDriveCamera implements Runnable {
                 autoState = 0;
                 pointNum = 0;
                 RTDrive.setDriveMode(DriveMode.stop);
+                System.out.println("[AlignDC] reset auto system");
             } 
             
+            SmartDashboard.putNumber("autoState", autoState);
+            SmartDashboard.putNumber("targetPOint", pointNum);
+
             if(driveStick.getRawButton(7)) {//test auto code
-                SmartDashboard.putNumber("autoState", autoState);
-                SmartDashboard.putNumber("targetPOint", pointNum);
+                
                 switch(autoState) {
                     case 0:
                         if(pointNum > points.length - 1) {
@@ -274,19 +271,32 @@ public class AlignDriveCamera implements Runnable {
                                 autoState = 1;
                             }
                         }
-                    break;
+                        break;
+                    default:
+                        break;
+                    
                 }
                 SmartDashboard.putNumber("DeltaX", dx);
                 SmartDashboard.putNumber("DeltaY", dy);
             }
-            SmartDashboard.putNumber("autostate", autoState);
+
+            //if(driveStick.getRawButtonPressed(5)) {
+                //RTDrive.targetAngle = 90;
+                //RTDrive.setDriveMode(DriveMode.rotate);
+            //}
+            //if(driveStick.getRawButtonPressed(6)) {
+                //RTDrive.targetAngle = 0;
+                //RTDrive.setDriveMode(DriveMode.rotate);
+            //} 
+
+            //SmartDashboard.putNumber("autostate", autoState);
 
             //SmartDashboard.putNumber("shooterVelocity", shooterMotor.getSelectedSensorVelocity());
             //SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
 
             checkIn = System.currentTimeMillis();
             //throws InterruptedException {Thread.sleep(10);}
-            //if(System.currentTimeMillis() < (start + 1)) try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
+            try {Thread.sleep(3);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
         intakeLiftMotor.set(ControlMode.PercentOutput, 0);
     }

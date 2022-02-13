@@ -112,7 +112,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         rightPosition = -DR1Motor.getSelectedSensorPosition();
         realyaw = navX.getAngle() - angleOffset;
         //double realrealyawImeanitthistime = navX.getYaw();
-        absyaw = realyaw % 360;
+        absyaw = Math.abs(realyaw % 360);
         //double roll = navX.getRoll();
         //double pitch = navX.getPitch();
         currentPosition = calcGraphTransition(currentPosition, ((leftPosition - oldLeftDrivePosition) + (rightPosition - oldRightDrivePosition)) / 2, (absyaw + oldYaw) / 2);
@@ -187,7 +187,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
         currentPosition = new Vector2d(0, 0);
         //navX = new AHRS(SPI.Port.kMXP);
-        
+        while((!navX.isConnected()) || navX.isCalibrating())
+        {
+            try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
+        }
         calibrateTracking();
         System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
 
@@ -240,7 +243,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 //following is placeholder
                 float minSpeed = 0.06f;
                 delta = 0.0;
-                double maxTurning = 0.6;
+                double maxTurning = 0.3;
                 switch(mode) {
                     case rotate:
                         delta = targetAngle - (realyaw - targetAngleOffset);
@@ -255,7 +258,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                         //
                         aimInputy = 0;
 
-                        autoConditionSatisfied = (Math.abs(delta) < 1.0) && (navX.getRate() < 0.005); //auto is satisfied if almost still
+                        autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
                         break;
                     case distance:
                         delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
@@ -266,7 +269,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 
 
                 aimInput = (aimInput > 1)? 1 : aimInput;
-                aimInputy = (aimInputy > 0.5)? 0.5 : aimInputy;
+                aimInputy = (aimInputy > 0.3)? 0.3 : aimInputy;
 
                 aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
                 aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
@@ -281,7 +284,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.95;
+                double fullSpeed = 0.65;
 
 
                 //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
@@ -347,12 +350,12 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 1000000) {
-                //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
+                System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
 
 
             //TODO: improve RTDrive thread timing
-            try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
+            //try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
         System.out.println("[RTDrive] left independent service");
