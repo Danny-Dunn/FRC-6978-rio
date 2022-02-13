@@ -55,6 +55,8 @@ public class Robot extends TimedRobot {
     shooter = new Shooter(driverStick);
 
     
+    RTDrive.init();
+
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -63,7 +65,9 @@ public class Robot extends TimedRobot {
    * diagnostics that you want ran during disabled, autonomous, teleoperated and test.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    RTDrive.standby(true);
+  }
 
   //auto
   @Override
@@ -80,8 +84,6 @@ public class Robot extends TimedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-    driverStick = new Joystick(0);
-    RTDrive.setup();
     //Intak.init();
     AlignDC.initCamera();
     //pneumatics.init();

@@ -42,11 +42,14 @@ public class RealTimeDrive implements Runnable {
     double oldRightDrivePosition;
     double leftPosition;
     double rightPosition;
+    double leftDrive;
+    double rightDrive;
     double oldYaw;
     double absyaw;
     double realyaw;
     double ticksPerCentimetre = 1042.18; //new gearboxes
     //double ticksPerCentimetre = 385.47; //old gearboxes
+    double delta; //generic delta variable used for BOTH position and angle
     AHRS navX;
 
     double angleOffset;
@@ -66,6 +69,10 @@ public class RealTimeDrive implements Runnable {
     boolean autoConditionSatisfied;
 
     //SmartDashboard sdb;
+
+    double angleP;
+    double angleP2;
+    double distanceP;
 
     void setDriveMode(DriveMode dm) {
         mode = dm;
@@ -169,7 +176,7 @@ public class RealTimeDrive implements Runnable {
         return shooterMotor.getSelectedSensorVelocity();
     }
 
-    public boolean setup() {
+    public boolean init() {
         //setup motors
         DL1Motor = new TalonFX(1);
         DL2Motor = new TalonFX(2);
@@ -177,17 +184,44 @@ public class RealTimeDrive implements Runnable {
         DR2Motor = new TalonFX(4);
 
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
-        System.out.println("[RtDrive] Start OK");
 
         currentPosition = new Vector2d(0, 0);
         //navX = new AHRS(SPI.Port.kMXP);
         
         calibrateTracking();
-        System.out.println("[RtDrive] Calibrated tracking with angle offset " + angleOffset);
+        System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
 
-        return true; //everything went fine
+        System.out.println("[RTDrive] Initialised module");
+
+        return true; //everything went fine??
     }
-    
+    //standby function should be called every time the module should do things like report telemetry
+    public void standby(boolean takeConfigOptions) {
+        simOut("leftDrive", leftDrive);
+        simOut("rightDrive", rightDrive);
+
+        SmartDashboard.putNumber("DL1 Temp", DL1Motor.getTemperature());
+        SmartDashboard.putNumber("DL2 Temp", DL2Motor.getTemperature());
+        SmartDashboard.putNumber("DR1 Temp", DR1Motor.getTemperature());
+        SmartDashboard.putNumber("DR2 Temp", DR2Motor.getTemperature());
+
+        SmartDashboard.putNumber("DL1 Current", DL1Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DL2 Current", DL2Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DR1 Current", DR1Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DR2 Current", DR2Motor.getStatorCurrent());
+
+        SmartDashboard.putNumber("targetDelta", delta);
+        SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
+        SmartDashboard.putNumber("gyroRate", navX.getRate());
+
+        if(takeConfigOptions) {
+            angleP = SmartDashboard.getNumber("angleP", 0.002);
+            angleP2 = SmartDashboard.getNumber("angleP2", 0.002);
+
+            distanceP = SmartDashboard.getNumber("distanceP", 0.002);
+        }
+    }
+
     public boolean exitFlag;
     public void run() { //might remove
         
@@ -205,13 +239,11 @@ public class RealTimeDrive implements Runnable {
             if(driverStick.getRawButton(7) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
                 float minSpeed = 0.06f;
-                double delta = 0.0;
+                delta = 0.0;
                 double maxTurning = 0.6;
                 switch(mode) {
                     case rotate:
                         delta = targetAngle - (realyaw - targetAngleOffset);
-                        double angleP = SmartDashboard.getNumber("angleP", 0.002);
-                        double angleP2 = SmartDashboard.getNumber("angleP2", 0.002);
 
                         if(delta < 130.0) {
                             aimInput = delta * angleP2;
@@ -224,17 +256,14 @@ public class RealTimeDrive implements Runnable {
                         aimInputy = 0;
 
                         autoConditionSatisfied = (Math.abs(delta) < 1.0) && (navX.getRate() < 0.005); //auto is satisfied if almost still
-                        SmartDashboard.putNumber("gyroRate", navX.getRate());
                         break;
                     case distance:
                         delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
-                        double distanceP = SmartDashboard.getNumber("distanceP", 0.002);
                         aimInput = 0;
                         aimInputy = delta * distanceP;
                         autoConditionSatisfied = (Math.abs(delta) < 4.0);
                 }
                 
-                SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
 
                 aimInput = (aimInput > 1)? 1 : aimInput;
                 aimInputy = (aimInputy > 0.5)? 0.5 : aimInputy;
@@ -242,16 +271,13 @@ public class RealTimeDrive implements Runnable {
                 aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
                 aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
 
-                double leftDrive = aimInput + aimInputy;
-                double rightDrive = -aimInput + aimInputy;
+                leftDrive = aimInput + aimInputy;
+                rightDrive = -aimInput + aimInputy;
 
                 DL1Motor.set(ControlMode.PercentOutput, leftDrive);
                 DL2Motor.set(ControlMode.PercentOutput, leftDrive);
                 DR1Motor.set(ControlMode.PercentOutput, -rightDrive); //inverting
                 DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
-                simOut("leftDrive", leftDrive);
-                simOut("rightDrive", rightDrive);
-                SmartDashboard.putNumber("targetDelta", delta);
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
@@ -278,8 +304,8 @@ public class RealTimeDrive implements Runnable {
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                 simOut("yval", y);
 
-                double leftDrive = y + x;
-                double rightDrive = y - x;
+                leftDrive = y + x;
+                rightDrive = y - x;
                 
                 leftDrive = leftDrive / (1.0 - deadZone);
                 rightDrive = rightDrive / (1.0 - deadZone);
@@ -298,11 +324,7 @@ public class RealTimeDrive implements Runnable {
                 DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
                 DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
                 
-                //TODO: Determine if detailed SmartDasboard output is ok on performance
-                simOut("leftDrive", leftDrive);
-                simOut("rightDrive", rightDrive);
-                double delta = realyaw - targetAngleOffset;
-                SmartDashboard.putNumber("targetDelta", realyaw - targetAngleOffset);
+                delta = realyaw - targetAngleOffset;
             }
 
             
@@ -328,15 +350,6 @@ public class RealTimeDrive implements Runnable {
                 //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
 
-            SmartDashboard.putNumber("DL1 Temp", DL1Motor.getTemperature());
-            SmartDashboard.putNumber("DL2 Temp", DL2Motor.getTemperature());
-            SmartDashboard.putNumber("DR1 Temp", DR1Motor.getTemperature());
-            SmartDashboard.putNumber("DR2 Temp", DR2Motor.getTemperature());
-
-            SmartDashboard.putNumber("DL1 Current", DL1Motor.getStatorCurrent());
-            SmartDashboard.putNumber("DL2 Current", DL2Motor.getStatorCurrent());
-            SmartDashboard.putNumber("DR1 Current", DR1Motor.getStatorCurrent());
-            SmartDashboard.putNumber("DR2 Current", DR2Motor.getStatorCurrent());
 
             //TODO: improve RTDrive thread timing
             try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
