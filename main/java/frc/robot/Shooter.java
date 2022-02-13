@@ -14,7 +14,7 @@ public class Shooter implements Runnable, ServiceableModule {
 
     public Shooter(Joystick driveStick) {
         this.driveStick = driveStick;
-        SmartDashboard.putNumber("Shooter Power", -0.6);
+        SmartDashboard.putNumber("Shooter Power", 0.6);
     }
 
 
@@ -22,6 +22,8 @@ public class Shooter implements Runnable, ServiceableModule {
     public boolean init() {
         shooterMotor = new TalonSRX(10);
         shooterMotor.setSelectedSensorPosition(0);
+        shooterMotor.setSensorPhase(true);
+        shooterMotor.setInverted(true);
         System.out.println("[Shooter] finished initialisation");
         return true;
     }
@@ -30,7 +32,7 @@ public class Shooter implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("Shooter Speed", shooterMotor.getSelectedSensorVelocity());
 
         if(takeConfigOptions) {
-            shooterPower = SmartDashboard.getNumber("Shooter Power", -0.6);
+            shooterPower = SmartDashboard.getNumber("Shooter Power", 0.6);
         }
     }
 

@@ -22,7 +22,7 @@ public class Climb implements Runnable, ServiceableModule {
 
     double holdingBias = 0.2;
     double pullingPower = 0.5;
-    double pushingPower = 0;
+    double pushingPower = -0.1;
 
     public Climb(Joystick driveStick, Joystick operatorStick) {
         this.driveStick = driveStick;
@@ -40,6 +40,8 @@ public class Climb implements Runnable, ServiceableModule {
         CFRMotor.setSelectedSensorPosition(0);
         CBLMotor.setSelectedSensorPosition(0);
         CBRMotor.setSelectedSensorPosition(0);
+
+        CBLMotor.setInverted(true);
         System.out.println("[Climb] finished initialisation");
         return true;
     }
@@ -62,7 +64,10 @@ public class Climb implements Runnable, ServiceableModule {
     }*/
 
     public void standby(boolean takeConfigOptions) {
-
+        SmartDashboard.putNumber("CFL Current", CFLMotor.getStatorCurrent());
+        SmartDashboard.putNumber("CFR Current", CFRMotor.getStatorCurrent());
+        SmartDashboard.putNumber("CBL Current", CBLMotor.getStatorCurrent());
+        SmartDashboard.putNumber("CBR Current", CBRMotor.getStatorCurrent());
     }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
