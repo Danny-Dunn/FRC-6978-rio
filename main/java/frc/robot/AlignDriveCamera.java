@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.drive.Vector2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RealTimeDrive.DriveMode;
+import frc.robot.AutoCommand.CommandType;
 import edu.wpi.first.wpilibj.Joystick;
 
 
@@ -44,19 +45,35 @@ public class AlignDriveCamera implements Runnable {
         new Vector2d(0, 200),
         new Vector2d(0, 0)
     };*/
-    Vector2d points[] = {
+    /*Vector2d points[] = {
         new Vector2d(200, 0),
         new Vector2d(300, -100),
         new Vector2d(300, 100),
         new Vector2d(200, 0),
         new Vector2d(0, 0)
-    };
-    /*Vector2d points[] = {
-        new Vector2d(0, 200),
-        new Vector2d(200, 200),
-        new Vector2d(200, 0),
-        new Vector2d(0, 0)
     };*/
+    Vector2d points[] = {
+        new Vector2d(92, 0),
+        new Vector2d(138, -45),
+        new Vector2d(330, -52),
+        new Vector2d(335, 37),
+        new Vector2d(275, 99),
+        new Vector2d(137, 115),
+        new Vector2d(101, 0),
+        new Vector2d(0, 0),
+    };
+
+    AutoCommand commands[] = {
+        new AutoCommand(CommandType.SetIntake, 100, 0),
+        new AutoCommand(82, 0),
+        new AutoCommand(CommandType.SetIntake, 100, 0.6),
+        new AutoCommand(96, 0),
+        new AutoCommand(CommandType.SetIntake, 0, 0),
+        new AutoCommand(CommandType.RotateToAngle, 180, 0),
+        new AutoCommand(CommandType.SetShooter, 14000, 2), //fire 2 balls
+        new AutoCommand(430, 146), //go near driver station
+    };
+
     double dx;
     double dy;
 
@@ -229,46 +246,85 @@ public class AlignDriveCamera implements Runnable {
                 
                 switch(autoState) {
                     case 0:
-                        if(pointNum > points.length - 1) {
-                            autoState = -1; //shut down autodrive
-                        } else {
-                            dy = points[pointNum].y - RTDrive.currentPosition.y;
-                            dx = points[pointNum].x - RTDrive.currentPosition.x;
-                            if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 6.0) { //check if we are already close enough
-                                pointNum++;
-                            } else {
-                                autoState++;
-                            }
+                        if(pointNum > commands.length) {
+                            autoState = -1;
+                            break;
                         }
-                    case 1: //rotate to angle
-                        dy = points[pointNum].y - RTDrive.currentPosition.y;
-                        dx = points[pointNum].x - RTDrive.currentPosition.x;
-                        RTDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
+                        switch(commands[pointNum].type) {
+                            case DriveToPoint:
+                                autoState = 1;
+                                break;
+                            case SetIntake:
+                                //set intake
+                                pointNum++;
+                                break;
+                            case SetShooter:
+                                //set shooter
+                                pointNum++;
+                                break;
+                            case RotateToAngle:
+                                autoState = 2;
+                        }
+                        break;
+                    case 1: // start driving to point
+                        
+                        dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
+                        dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
+                        if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 6.0) { //check if we are already close enough
+                            pointNum++;
+                        } else {
+                            autoState++;
+                        }
+                        
+                        break;
+                    case 2: //rotate to angle
+                        switch(commands[pointNum].type) {
+                            case DriveToPoint:
+                                dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
+                                dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
+                                RTDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
+                                autoState++;
+                                break;
+                            case RotateToAngle:
+                                RTDrive.targetAngle = commands[pointNum].aparam; 
+                            default:
+                                autoState = 0;
+
+                        }
+                        
                         
                         RTDrive.setDriveMode(DriveMode.rotate);
                         autoState++;
                         break;
-                    case 2:
+                    case 3:
                         if(RTDrive.autoConditionSatisfied) {
-                            autoState++;
+                            switch(commands[pointNum].type) {
+                                case DriveToPoint:
+                                    autoState++;
+                                    break;
+                                default:
+                                    autoState = 0;
+
+                            }
+                            
                         }
                         break;
-                    case 3:
-                        dy = points[pointNum].y - RTDrive.currentPosition.y;
-                        dx = points[pointNum].x - RTDrive.currentPosition.x;
+                    case 4:
+                        dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
+                        dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
                         RTDrive.targetDistance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0));
                         RTDrive.setDriveMode(DriveMode.distance);
                         autoState++;
                         break;
-                    case 4:
+                    case 5:
                         if(RTDrive.autoConditionSatisfied) {
-                            dy = points[pointNum].y - RTDrive.currentPosition.y;
-                            dx = points[pointNum].x - RTDrive.currentPosition.x;
+                            dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
+                            dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
                             if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 15.0) {
-                                autoState = 0;
                                 pointNum++;
+                                autoState = 0;
                             } else {
-                                autoState = 1;
+                                autoState = 2;
                             }
                         }
                         break;
