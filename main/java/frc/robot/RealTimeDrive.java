@@ -2,6 +2,9 @@ package frc.robot;
 //Cross The Road Electronics(CTRE) libs must be installed
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+
+import java.util.Map;
+
 import com.ctre.phoenix.motorcontrol.ControlMode;
 
 import com.kauailabs.navx.frc.AHRS;
@@ -26,6 +29,19 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     TalonSRX loaderMotor;
     
     Joystick driverStick;
+
+    int calibrateButton;
+    int autoButton;
+
+    boolean firstCycle;
+
+    private enum ControllerType {
+        PS5,
+        standard,
+    };
+
+    private ControllerType controllerType;
+
     public double aimInput;
     public double aimInputy;
     public double shooterInput;
@@ -56,12 +72,14 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     public enum DriveMode {
         rotate,
         distance,
+        curve,
         stop
     };
 
     DriveMode mode;
     double targetAngle;
     double targetAngleOffset;
+    double targetGyroRate;
     double targetDistance;
     double leftOffset;
     double rightOffset;
@@ -75,15 +93,19 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     double angleI;
     double eIntegral;
     long angleTS;
+    long autoTS;
 
     void setDriveMode(DriveMode dm) {
         mode = dm;
         autoConditionSatisfied = false;
+        autoTS = System.nanoTime();
+        angleTS = System.nanoTime();
+        double absDelta;
         switch(dm) {
             case rotate:
                 targetAngleOffset = realyaw;
                 //targetAngle = targetAngle - targetAngleOffset;
-                double absDelta = targetAngle - absyaw;
+                absDelta = targetAngle - absyaw;
                 if(absDelta > 180) {
                     absDelta = absDelta - 360;
                 } else if(absDelta < -180) {
@@ -99,6 +121,17 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 eIntegral = 0;
                 leftOffset = leftPosition;
                 rightOffset = rightPosition;
+            case curve:
+                leftOffset = leftPosition;
+                rightOffset = rightPosition;
+                targetAngleOffset = realyaw;
+                absDelta = targetAngle - absyaw;
+                if(absDelta > 180) {
+                    absDelta = absDelta - 360;
+                } else if(absDelta < -180) {
+                    absDelta = absDelta + 360;
+                }
+                targetAngle = absDelta;
             default:
                 break;
         }
@@ -144,6 +177,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         DL2Motor.setSelectedSensorPosition(0);
         DR1Motor.setSelectedSensorPosition(0);
         DR2Motor.setSelectedSensorPosition(0);
+        navX.calibrate();
         double cumulative = 0;
         for(int i = 0; i < 450; i++) {
             cumulative += navX.getAngle();
@@ -157,9 +191,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         this.driverStick = driveStick;
         this.navX = navX;
         this.aimInput = 0;
-        SmartDashboard.putNumber("angleP", 0.0018);
+        SmartDashboard.putNumber("angleP", 0.0158);
         SmartDashboard.putNumber("angleP2", 0.0104);
-        SmartDashboard.putNumber("angleI", 0.00084);
+        SmartDashboard.putNumber("angleI", 0.000007);
         SmartDashboard.putNumber("distanceP", 0.016);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
@@ -200,6 +234,19 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         }
         calibrateTracking();
         System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
+        mode = DriveMode.stop;
+
+        if(driverStick.getName().equals("Wireless Controller")) {
+            System.out.println("[RTDrive] detected PS5 controller, switching mapping");
+            controllerType = ControllerType.PS5;
+            calibrateButton = 10;
+            autoButton = 9;
+        } else {
+            controllerType = ControllerType.standard;
+            System.out.println("[RTDrive] using default mapping");
+            calibrateButton = 8;
+            autoButton = 7;
+        }
 
         System.out.println("[RTDrive] finished initialisation");
 
@@ -232,33 +279,48 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         }
     }
 
+    void forcefulDisconnect(String reason) {
+        System.out.println("[RTDrive] CRITICAL!! " + reason);
+        System.out.println("[RTDrive] disconnected");
+        DL1Motor.set(ControlMode.PercentOutput, 0);
+        DL2Motor.set(ControlMode.PercentOutput, 0);
+        DR1Motor.set(ControlMode.PercentOutput, 0);
+        DR2Motor.set(ControlMode.PercentOutput, 0);
+        SmartDashboard.putBoolean("RTDrive OK", false);
+        return;
+    }
+
     public boolean exitFlag;
     public void run() { //might remove
         System.out.println("[RTDrive] entered independent service");
         exitFlag = false; //clear flag on start
         SmartDashboard.putBoolean("RTDrive OK", true);
+        firstCycle = true;
         while (!exitFlag) {
             long start = System.nanoTime();
             
             advanceTracking();
-            if(driverStick.getRawButtonPressed(8)) {
+
+            if(driverStick.getRawButtonPressed(calibrateButton)) {
                 calibrateTracking();
             }
 
             //alignEnabled = driverStick.getRawButton(4);
-            if(driverStick.getRawButton(7) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
+            if(driverStick.getRawButton(autoButton) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
                 //following is placeholder
                 float minSpeed = 0.06f;
                 delta = 0.0;
                 double maxTurning = 0.3;
+                double deltaT;
                 switch(mode) {
                     case rotate:
                         delta = targetAngle - (realyaw - targetAngleOffset);
 
-                        double deltaT = (System.nanoTime() - angleTS) / 10000;
+                        deltaT = (System.nanoTime() - angleTS) / 1000000;
                         angleTS = System.nanoTime();
 
                         eIntegral += delta * deltaT;
+                        SmartDashboard.putNumber("eIntegral", eIntegral);
 
                         aimInput = (delta * angleP) + (eIntegral * angleI);
 
@@ -274,6 +336,28 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                         aimInput = 0;
                         aimInputy = delta * distanceP;
                         autoConditionSatisfied = (Math.abs(delta) < 4.0);
+                        break;
+                    case curve:
+                        double angleRateP = 0.5;
+                        double angleRateI = 0.01;
+
+                        double progress = ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre) / targetDistance; //0 to 1 of the distance we have traveled
+                        
+                        double distanceDelta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
+                        aimInputy = distanceDelta * distanceP;
+
+                        double rateDelta = targetGyroRate - (navX.getRate());
+
+                        deltaT = (System.nanoTime() - angleTS) / 100000000;
+                        angleTS = System.nanoTime();
+
+                        eIntegral += rateDelta * deltaT;
+
+                        aimInput = (rateDelta * angleRateP) + (eIntegral * angleRateI);
+
+                        aimInput = (aimInput > maxTurning)? maxTurning: aimInput;
+                        aimInput = (aimInput < -maxTurning)? -maxTurning: aimInput;
+                        break;
                     case stop:
                         aimInput = 0;
                         aimInputy = 0;
@@ -296,24 +380,41 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.65;
+                double fullSpeed = 0.35;
 
 
                 //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
-                double Lt = driverStick.getRawAxis(3);
-                double Rt = driverStick.getRawAxis(2);
-                double y = Lt  - Rt;
+                double Lt;
+                double Rt;
+                if(controllerType == ControllerType.PS5) {
+                    Lt = (driverStick.getRawAxis(4) + 1.0) / 2;
+                    Rt = (driverStick.getRawAxis(3) + 1.0) / 2;
+                } else {
+                    Lt = driverStick.getRawAxis(3);
+                    Rt = driverStick.getRawAxis(2);
+                }
+
+                if(Lt < 0 || Rt < 0) {
+                    forcefulDisconnect("invalid trigger inputs " + Lt + " " + Rt);
+                    exitFlag = true;
+                    return;
+                }
+
+                double y = Lt - Rt;
 
                 //double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
-                double aparam = 0.1;
-                double bparam = 0.8;
-                x = (aparam * (x * x * x)) + (bparam * x);
+                
                 //deadzone calclations
                 x = (x < deadZone && x > -deadZone)? 0 : x;
                 if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
                 simOut("xval", x);
-                x = x * 0.7;
+                x = x * (1 - deadZone);
+
+                double aparam = 0.1;
+                double bparam = 0.8;
+
+                x = (aparam * (x * x * x)) + (bparam * x);
                 
                 y = (y < deadZone && y > -deadZone)? 0 : y;
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
@@ -333,7 +434,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 leftDrive = (leftDrive < -fullSpeed)? -fullSpeed : leftDrive;
                 rightDrive = (rightDrive < -fullSpeed)? -fullSpeed : rightDrive;
 
-                  
+                if(firstCycle) {
+                    if(leftDrive != 0 || rightDrive != 0) {
+                        forcefulDisconnect("manual drive state not zeroed on startup");
+                        exitFlag = true;
+                        return;
+                    }
+                    firstCycle = false;
+                }
+
                 DL1Motor.set(ControlMode.PercentOutput, leftDrive);
                 DL2Motor.set(ControlMode.PercentOutput, leftDrive);
                 DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
@@ -362,7 +471,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 1000000) {
-                System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
+                //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
 
 
