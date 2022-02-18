@@ -380,15 +380,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 0.35;
+                double fullSpeed = 1.0;
 
 
                 //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
                 double Lt;
                 double Rt;
                 if(controllerType == ControllerType.PS5) {
-                    Lt = (driverStick.getRawAxis(4) + 1.0) / 2;
-                    Rt = (driverStick.getRawAxis(3) + 1.0) / 2;
+                    Lt = (driverStick.getRawAxis(2) + 1.0) / 2;
+                    Rt = (driverStick.getRawAxis(5) + 1.0) / 2;
                 } else {
                     Lt = driverStick.getRawAxis(3);
                     Rt = driverStick.getRawAxis(2);
@@ -400,7 +400,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     return;
                 }
 
-                double y = Lt - Rt;
+                double y = Rt - Lt;
 
                 //double y = driverStick.getY() * -1;
                 double x = driverStick.getX();
@@ -408,23 +408,21 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 //deadzone calclations
                 x = (x < deadZone && x > -deadZone)? 0 : x;
                 if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
+                x = x / (1 - deadZone);
                 simOut("xval", x);
-                x = x * (1 - deadZone);
 
-                double aparam = 0.1;
-                double bparam = 0.8;
+                double aparam = 0.6;
 
-                x = (aparam * (x * x * x)) + (bparam * x);
+                x = (aparam * (x * x * x)) + ((1-aparam) * x);
                 
                 y = (y < deadZone && y > -deadZone)? 0 : y;
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
+                y = y / (1 - deadZone);
                 simOut("yval", y);
 
                 leftDrive = y + x;
                 rightDrive = y - x;
                 
-                leftDrive = leftDrive / (1.0 - deadZone);
-                rightDrive = rightDrive / (1.0 - deadZone);
                 //speed scaling
                 leftDrive = leftDrive * fullSpeed; 
                 rightDrive = rightDrive * fullSpeed;
