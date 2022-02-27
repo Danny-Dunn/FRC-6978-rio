@@ -48,13 +48,13 @@ public class Robot extends TimedRobot {
     navX = new AHRS(Port.kMXP);
     RTDrive = new RealTimeDrive(driverStick, navX);
     AlignDC = new AlignDriveCamera(RTDrive, driverStick);
-    Intak = new Intake(driverStick);
+    Intak = new Intake(operatorStick);
     climb = new Climb(driverStick, operatorStick);
     shooter = new Shooter(driverStick);
 
     
     RTDrive.init();
-
+    Intak.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -65,6 +65,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     RTDrive.standby(true);
+    Intak.standby(true);
   }
 
   //auto
@@ -92,7 +93,7 @@ public class Robot extends TimedRobot {
     
     
     RTDrive_thread = new Thread(RTDrive, "RTDrive");
-    //Intake_thread = new Thread(Intak, "Intake");
+    Intake_thread = new Thread(Intak, "Intake");
     AlignDC_thread = new Thread(AlignDC, "AlignDC");
     climb_thread = new Thread(climb, "Climb");
     shooter_thread = new Thread(shooter, "Shooter");
@@ -101,7 +102,7 @@ public class Robot extends TimedRobot {
     AlignDC_thread.start();
     climb_thread.start();
     shooter_thread.start();
-    //Intake_thread.start();
+    Intake_thread.start();
     //pneumatics_thread.start();
   }
 
