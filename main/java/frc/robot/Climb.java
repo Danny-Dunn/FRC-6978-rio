@@ -15,27 +15,31 @@ public class Climb implements Runnable, ServiceableModule {
     TalonSRX CFRMotor; 
     TalonSRX CFLMotor; 
 
+    TalonSRX HookCarriageMotor;
+
 
     double catchPoint = -111; //point at which the lift is considered up and should begin bias power
     boolean frontState;
     boolean backState;
 
-    double holdingBias = 0.2;
-    double pullingPower = 0.5;
-    double pushingPower = -0.1;
+    double holdingBias = -0.2;
+    double pullingPower = -0.5;
+    double pushingPower = 0.2;
 
     public Climb(Joystick driveStick, Joystick operatorStick) {
         this.driveStick = driveStick;
         this.operatorStick = operatorStick;
     }
 
-
+    boolean autoConditionSatisfied;
+    boolean autoEnabled;
 
     public boolean init() {
         CFLMotor = new TalonSRX(20);
         CFRMotor = new TalonSRX(21);
         CBLMotor = new TalonSRX(22);
         CBRMotor = new TalonSRX(23);
+        HookCarriageMotor = new TalonSRX(24);
         CFLMotor.setSelectedSensorPosition(0);
         CFRMotor.setSelectedSensorPosition(0);
         CBLMotor.setSelectedSensorPosition(0);
@@ -46,9 +50,9 @@ public class Climb implements Runnable, ServiceableModule {
         return true;
     }
 
-    /*void climbPID(double goal) {
+    void climbPID(double goal, TalonSRX motor) {
         double p = 0.0015;
-        double distance = climbMotor.getSelectedSensorPosition();
+        double distance = motor.getSelectedSensorPosition();
         
         double error = goal - distance;
         double output = error * p;
@@ -60,8 +64,8 @@ public class Climb implements Runnable, ServiceableModule {
         }
 
         output = -output;
-        //climbMotor.set(ControlMode.PercentOutput, output);
-    }*/
+        motor.set(ControlMode.PercentOutput, output);
+    }
 
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("CFL Current", CFLMotor.getStatorCurrent());
@@ -78,11 +82,11 @@ public class Climb implements Runnable, ServiceableModule {
         System.out.println("[Climb] entered independent service");
         while(!exitFlag) {
             
-            if(operatorStick.getRawButton(5)){ //front pull 
+            if(operatorStick.getRawButton(7)){ //front pull 
                 frontState = true;
                 CFLMotor.set(ControlMode.PercentOutput, pullingPower);
                 CFRMotor.set(ControlMode.PercentOutput, pullingPower);
-            } else if (operatorStick.getRawButton(7)) { //front release
+            } else if (operatorStick.getRawButton(5)) { //front release
                 frontState = false;
                 CFLMotor.set(ControlMode.PercentOutput, pushingPower);
                 CFRMotor.set(ControlMode.PercentOutput, pushingPower);
@@ -95,11 +99,11 @@ public class Climb implements Runnable, ServiceableModule {
                 CFRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            if(operatorStick.getRawButton(6)){ //back pull 
+            if(operatorStick.getRawButton(8)){ //back pull 
                 backState = true;
                 CBLMotor.set(ControlMode.PercentOutput, pullingPower);
                 CBRMotor.set(ControlMode.PercentOutput, pullingPower);
-            } else if (operatorStick.getRawButton(8)) { //back release
+            } else if (operatorStick.getRawButton(6)) { //back release
                 backState = false;
                 CBLMotor.set(ControlMode.PercentOutput, pushingPower);
                 CBRMotor.set(ControlMode.PercentOutput, pushingPower);
@@ -111,7 +115,23 @@ public class Climb implements Runnable, ServiceableModule {
                 CBLMotor.set(ControlMode.PercentOutput, 0);
                 CBRMotor.set(ControlMode.PercentOutput, 0);
             }
+
+            if(operatorStick.getRawButton(1)) {
+                HookCarriageMotor.set(ControlMode.PercentOutput, 0.15);
+            } else if(operatorStick.getRawButton(3)) {
+                HookCarriageMotor.set(ControlMode.PercentOutput, -0.15);
+            } else {
+                HookCarriageMotor.set(ControlMode.PercentOutput, 0);
+            }
             
+            if(autoEnabled) {
+                climbPID(100, CBLMotor);
+                climbPID(100, CBRMotor);
+                climbPID(200, CFLMotor);
+                climbPID(200, CFRMotor);
+                
+            }
+
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
         System.out.println("[Climb] left independent service");
