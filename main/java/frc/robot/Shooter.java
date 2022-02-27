@@ -6,20 +6,21 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter implements Runnable, ServiceableModule {
-    Joystick driveStick; //joystick(only used for button inputs)
-    int shootButton;
+    private Thread mThread;
+    
+    private InputManager mDriverInputManager;
 
-    TalonSRX shooterMotor; 
+    private TalonSRX shooterMotor; 
 
-    double shooterPower;
+    private double shooterPower;
 
-    enum ShooterControlMode {
+    private enum ShooterControlMode {
         velocity,
         direct,
         none
     };
 
-    ShooterControlMode mShooterControlMode;
+    private ShooterControlMode mShooterControlMode;
 
     public void setShooterControlMode(ShooterControlMode mode) {
         switch (mode) {
@@ -32,8 +33,19 @@ public class Shooter implements Runnable, ServiceableModule {
         }
     }
 
-    public Shooter(Joystick driveStick) {
-        this.driveStick = driveStick;
+    private long integralTS;
+    private double integralError;
+    private double shooterPID(double target, double kP, double kI) {
+        double error = target - shooterMotor.getSelectedSensorVelocity();
+
+        integralError += ((System.nanoTime() - integralTS) * error) / 1000000000;
+        integralTS = System.nanoTime();
+
+        return (error * kP) + (integralError * kI);
+    }
+
+    public Shooter(InputManager inputManager) {
+        mDriverInputManager = inputManager;
         SmartDashboard.putNumber("Shooter Power", 0.6);
     }
 
@@ -49,15 +61,34 @@ public class Shooter implements Runnable, ServiceableModule {
         return true;
     }
 
-    long integralTS;
-    double integralError;
-    double shooterPID(double target, double kP, double kI) {
-        double error = target - shooterMotor.getSelectedSensorVelocity();
+    public boolean start() {
+        boolean ret;
 
-        integralError += ((System.nanoTime() - integralTS) * error) / 1000000000;
-        integralTS = System.nanoTime();
+        ret = mDriverInputManager.map();
+        if(!ret) return ret;
 
-        return (error * kP) + (integralError * kI);
+        exitFlag = false;
+
+        mThread = new Thread(this, "RTDrive");
+        mThread.start();
+
+        return true;
+    }
+
+    public boolean stop() {
+        if(mThread == null) return true;
+        exitFlag = true;
+        try {Thread.sleep(20);} catch (Exception e) {}
+
+        if(mThread.isAlive()) {
+            mThread.interrupt();
+            try {Thread.sleep(20);} catch (Exception e) {}
+            if(mThread.isAlive()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public void standby(boolean takeConfigOptions) {
@@ -71,12 +102,12 @@ public class Shooter implements Runnable, ServiceableModule {
     
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
-        exitFlag = false;
+        
         System.out.println("[Shooter] entered independent service");
         while(!exitFlag) {
-            if(driveStick.getRawButtonPressed(shootButton)) {
+            if(mDriverInputManager.getSouthButtonPressed()) {
                 setShooterControlMode(ShooterControlMode.velocity);
-            } else if(driveStick.getRawButtonReleased(shootButton)) {
+            } else if(mDriverInputManager.getSouthButtonReleased()) {
                 setShooterControlMode(ShooterControlMode.none);
             }
 

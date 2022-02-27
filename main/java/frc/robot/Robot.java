@@ -15,22 +15,16 @@ import java.lang.Thread;
 //THIS class will handle threads and driverstation/FMS major events
 public class Robot extends TimedRobot {
   
-  Joystick driverStick;
-  Joystick operatorStick;
+  InputManager mDriverInputManager;
+  InputManager mOperatorInputManager;
   
-  RealTimeDrive RTDrive;
-  AlignDriveCamera AlignDC;
-  Intake Intak;
+  RealTimeDrive mRealTimeDrive;
+  AutonomousController mAutonomousController;
+  Intake mIntake;
   PneumaticController pneumatics;
-  Climb climb;
-  Shooter shooter;
+  Climb mClimb;
+  Shooter mShooter;
 
-  Thread RTDrive_thread;
-  Thread AlignDC_thread;
-  Thread Intake_thread;
-  Thread pneumatics_thread;
-  Thread climb_thread;
-  Thread shooter_thread;
 
   AHRS navX;
 
@@ -42,19 +36,19 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    driverStick = new Joystick(0);
-    operatorStick = new Joystick(1);
+    mDriverInputManager = new InputManager(0);
+    mOperatorInputManager = new InputManager(1);
     
     navX = new AHRS(Port.kMXP);
-    RTDrive = new RealTimeDrive(driverStick, navX);
-    AlignDC = new AlignDriveCamera(RTDrive, driverStick);
-    Intak = new Intake(operatorStick);
-    climb = new Climb(driverStick, operatorStick);
-    shooter = new Shooter(driverStick);
+    mRealTimeDrive = new RealTimeDrive(mDriverInputManager, navX);
+    mAutonomousController = new AutonomousController(mRealTimeDrive);
+    mIntake = new Intake(mOperatorInputManager);
+    mClimb = new Climb(mOperatorInputManager);
+    mShooter = new Shooter(mDriverInputManager);
 
     
-    RTDrive.init();
-    Intak.init();
+    mRealTimeDrive.init();
+    mIntake.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -64,14 +58,21 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    RTDrive.standby(true);
-    Intak.standby(true);
+    mRealTimeDrive.standby(true);
+    mIntake.standby(true);
   }
 
   //auto
   @Override
   public void autonomousInit() {
-    
+
+    mRealTimeDrive.start();
+
+    mIntake.start();
+    mShooter.start();
+
+    mAutonomousController.init();
+    mAutonomousController.start();
   }
 
   /** This function is called periodically during autonomous. */
@@ -83,45 +84,32 @@ public class Robot extends TimedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-    //Intak.init();
-    AlignDC.initCamera();
-    //pneumatics.init();
-    climb.init();
-    shooter.init();
+    mClimb.init();
+    mShooter.init();
 
     System.out.println("test?");
     
-    
-    RTDrive_thread = new Thread(RTDrive, "RTDrive");
-    Intake_thread = new Thread(Intak, "Intake");
-    AlignDC_thread = new Thread(AlignDC, "AlignDC");
-    climb_thread = new Thread(climb, "Climb");
-    shooter_thread = new Thread(shooter, "Shooter");
-    //pneumatics_thread = new Thread(pneumatics, "Pneumatics");
-    RTDrive_thread.start();
-    AlignDC_thread.start();
-    climb_thread.start();
-    shooter_thread.start();
-    Intake_thread.start();
+    mRealTimeDrive.start();
+    mClimb.start();
+    mIntake.start();
+    mShooter.start();
     //pneumatics_thread.start();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    RTDrive.alignDCOK = true; //if no response for 800
-    shooter.standby(true);
-    try {Thread.sleep(10);} catch (InterruptedException ie) {} //chec 10 times per second
+    mShooter.standby(true);
   }
 
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {
-    RTDrive.exitFlag = true;
-    AlignDC.exitFlag = true;
-    Intak.exitFlag = true;
-    climb.exitFlag = true;
-    shooter.exitFlag = true;
+    mRealTimeDrive.stop();
+    mClimb.stop();
+    mIntake.stop();
+    mShooter.stop();
+    mAutonomousController.stop();
     //pneumatics.exitFlag = true;
   }
 

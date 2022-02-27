@@ -3,6 +3,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class PneumaticController implements Runnable {
@@ -19,10 +20,10 @@ public class PneumaticController implements Runnable {
     }
 
     public void init() {
-        compressor = new Compressor(0);
-        compressor.setClosedLoopControl(false);
-        solenoid = new Solenoid(0);
-        compressor.setClosedLoopControl(false);
+        compressor = new Compressor(PneumaticsModuleType.CTREPCM);
+        compressor.disable();
+        solenoid = new Solenoid(PneumaticsModuleType.CTREPCM, 0);
+        compressor.enableDigital();
     }
 
     public void run() {
@@ -31,13 +32,13 @@ public class PneumaticController implements Runnable {
             if (driveStick.getRawButton(1)) compressorState = !compressorState;
             if (driveStick.getRawButton(2)) solenoidState = !solenoidState;
 
-            compressor.setClosedLoopControl(compressorState);
+            compressor.disable();
             solenoid.set(solenoidState);
 
             SmartDashboard.putBoolean("compressor", compressorState);
             SmartDashboard.putBoolean("solenoid", solenoidState);
         }
-        compressor.setClosedLoopControl(false);
+        compressor.disable();
         solenoid.set(false);
     }
 }

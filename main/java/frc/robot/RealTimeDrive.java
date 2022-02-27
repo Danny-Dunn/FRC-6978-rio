@@ -20,6 +20,8 @@ import edu.wpi.first.wpilibj.drive.Vector2d;
 //simOuts are for simulation purposes only, these can be removed in final robot code to improve efficiency
 
 public class RealTimeDrive implements Runnable, ServiceableModule {
+    Thread mThread;
+    
     //motors
     TalonFX DL1Motor;
     TalonFX DL2Motor;
@@ -28,27 +30,12 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     public TalonSRX shooterMotor;
     TalonSRX loaderMotor;
     
-    Joystick driverStick;
+    private InputManager mDriverInputManager;
 
     int calibrateButton;
     int autoButton;
 
     boolean firstCycle;
-
-    private enum ControllerType {
-        PS5,
-        standard,
-    };
-
-    private ControllerType controllerType;
-
-    public double aimInput;
-    public double aimInputy;
-    public double shooterInput;
-
-    boolean alignEnabled;
-    public boolean alignDCOK;
-    public boolean shooterEnabled;
 
     NetworkTable simTable;
 
@@ -69,14 +56,21 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
     double angleOffset;
 
-    public enum DriveMode {
+    public enum AutoMode {
         rotate,
         distance,
         curve,
-        stop
+        stop,
+        none
     };
 
-    DriveMode mode;
+    AutoMode mAutoMode;
+
+    enum DriveControlMode {
+        direct,
+        none
+    };
+
     double targetAngle;
     double targetAngleOffset;
     double targetGyroRate;
@@ -95,8 +89,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     long angleTS;
     long autoTS;
 
-    void setDriveMode(DriveMode dm) {
-        mode = dm;
+    void setDriveMode(AutoMode dm) {
+        mAutoMode = dm;
         autoConditionSatisfied = false;
         autoTS = System.nanoTime();
         angleTS = System.nanoTime();
@@ -149,48 +143,48 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     void advanceTracking() {
         leftPosition = DL1Motor.getSelectedSensorPosition();
         rightPosition = -DR1Motor.getSelectedSensorPosition();
+        
         realyaw = navX.getAngle() - angleOffset;
-        //double realrealyawImeanitthistime = navX.getYaw();
         absyaw = Math.abs(realyaw % 360);
-        //double roll = navX.getRoll();
-        //double pitch = navX.getPitch();
+
         currentPosition = calcGraphTransition(currentPosition, ((leftPosition - oldLeftDrivePosition) + (rightPosition - oldRightDrivePosition)) / 2, (absyaw + oldYaw) / 2);
+        
         oldYaw = absyaw;
         oldLeftDrivePosition = leftPosition;
         oldRightDrivePosition = rightPosition;
-        //TODO: Maybe remove these as they may cost performance
-        SmartDashboard.putNumber("trackX", currentPosition.x);
-        SmartDashboard.putNumber("trackY", currentPosition.y);
-        SmartDashboard.putNumber("DistanceL", leftPosition);
-        SmartDashboard.putNumber("DistanceR", rightPosition);
-        //SmartDashboard.putNumber("RealRealYaw", realrealyawImeanitthistime);
-        SmartDashboard.putNumber("Yaw", realyaw);
-        SmartDashboard.putNumber("absYaw", absyaw);
-        //SmartDashboard.putNumber("Pitch", pitch);
     }
 
-    void calibrateTracking() {
-        //navX.calibrate();
+    boolean calibrateTracking(boolean calibrateNavx) {
         currentPosition.x = 0;
         currentPosition.y = 0;
         DL1Motor.setSelectedSensorPosition(0);
         DL2Motor.setSelectedSensorPosition(0);
         DR1Motor.setSelectedSensorPosition(0);
         DR2Motor.setSelectedSensorPosition(0);
-        navX.calibrate();
+
+        if(calibrateNavx) {
+            navX.calibrate();
+            long waitTS = System.currentTimeMillis();
+            while((!navX.isConnected()) || navX.isCalibrating())
+            {
+                if(System.currentTimeMillis() - waitTS > 1000) return false;
+                try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
+            }
+            System.out.println("[RTDrive] navX finished cal after " + waitTS + "ms");
+        }
+
         double cumulative = 0;
         for(int i = 0; i < 450; i++) {
             cumulative += navX.getAngle();
         }
         angleOffset = cumulative / 450;
-        SmartDashboard.putNumber("offset", angleOffset);
+        return true;
     }
 
-    public RealTimeDrive(Joystick driveStick, AHRS navX) {
+    public RealTimeDrive(InputManager inputManager, AHRS navX) {
         //meta stuff
-        this.driverStick = driveStick;
+        this.mDriverInputManager = inputManager;
         this.navX = navX;
-        this.aimInput = 0;
         SmartDashboard.putNumber("angleP", 0.0158);
         SmartDashboard.putNumber("angleP2", 0.0104);
         SmartDashboard.putNumber("angleI", 0.000007);
@@ -227,31 +221,53 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
 
         currentPosition = new Vector2d(0, 0);
-        //navX = new AHRS(SPI.Port.kMXP);
-        while((!navX.isConnected()) || navX.isCalibrating())
-        {
-            try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
-        }
-        calibrateTracking();
-        System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
-        mode = DriveMode.stop;
 
-        if(driverStick.getName().equals("Wireless Controller")) {
-            System.out.println("[RTDrive] detected PS5 controller, switching mapping");
-            controllerType = ControllerType.PS5;
-            calibrateButton = 10;
-            autoButton = 9;
-        } else {
-            controllerType = ControllerType.standard;
-            System.out.println("[RTDrive] using default mapping");
-            calibrateButton = 8;
-            autoButton = 7;
-        }
+        if(!calibrateTracking(true)) return false;
+        System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
+        
+        mAutoMode = AutoMode.stop;
+
+        mDriverInputManager.map();
 
         System.out.println("[RTDrive] finished initialisation");
-
         return true; //everything went fine??
     }
+
+    public boolean start() {
+        boolean ret;
+
+        currentPosition = new Vector2d(0, 0);
+        ret = calibrateTracking(false);
+
+        ret = mDriverInputManager.map();
+        if(!ret) return ret;
+        
+        exitFlag = false;
+
+        mThread = new Thread(this, "RTDrive");
+        mThread.start();
+
+        return true;
+    }
+
+    public boolean stop() {
+        if(mThread == null) return true;
+        exitFlag = true;
+        try {Thread.sleep(20);} catch (Exception e) {}
+
+        if(mThread.isAlive()) {
+            mThread.interrupt();
+            try {Thread.sleep(20);} catch (Exception e) {}
+            if(mThread.isAlive()) {
+                return false;
+            }
+        }
+
+        mThread = null;
+
+        return true;
+    }
+
     //standby function should be called every time the module should do things like report telemetry
     public void standby(boolean takeConfigOptions) {
         simOut("leftDrive", leftDrive);
@@ -274,6 +290,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("SpeedL", DL1Motor.getSelectedSensorVelocity());
         SmartDashboard.putNumber("SpeedR", -DR1Motor.getSelectedSensorVelocity());
 
+        SmartDashboard.putNumber("trackX", currentPosition.x);
+        SmartDashboard.putNumber("trackY", currentPosition.y);
+        SmartDashboard.putNumber("DistanceL", leftPosition);
+        SmartDashboard.putNumber("DistanceR", rightPosition);
+        SmartDashboard.putNumber("Yaw", realyaw);
+        SmartDashboard.putNumber("absYaw", absyaw);
+
+        SmartDashboard.putString("autoMode", mAutoMode.toString());
+
         if(takeConfigOptions) {
             angleP = SmartDashboard.getNumber("angleP", 0.0015);
             angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
@@ -290,207 +315,153 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         DR1Motor.set(ControlMode.PercentOutput, 0);
         DR2Motor.set(ControlMode.PercentOutput, 0);
         SmartDashboard.putBoolean("RTDrive OK", false);
+        exitFlag = true;
         return;
     }
 
     public boolean exitFlag;
     public void run() { //might remove
         System.out.println("[RTDrive] entered independent service");
-        exitFlag = false; //clear flag on start
         SmartDashboard.putBoolean("RTDrive OK", true);
+        
         firstCycle = true;
-
-        if(driverStick.getName().equals("Wireless Controller")) {
-            System.out.println("[RTDrive] detected PS5 controller, switching mapping");
-            controllerType = ControllerType.PS5;
-            calibrateButton = 10;
-            autoButton = 9;
-        } else {
-            controllerType = ControllerType.standard;
-            System.out.println("[RTDrive] using default mapping");
-            calibrateButton = 8;
-            autoButton = 7;
-        }
 
         while (!exitFlag) {
             long start = System.nanoTime();
             
             advanceTracking();
 
-            if(driverStick.getRawButtonPressed(calibrateButton)) {
-                calibrateTracking();
+            if(mDriverInputManager.getRightSystemButton()) {
+                calibrateTracking(true);
             }
 
-            //alignEnabled = driverStick.getRawButton(4);
-            if(driverStick.getRawButton(autoButton) && alignDCOK/*replace with housekeeping*/ ) { //drive takeover, make sure alignDC is ok
-                //following is placeholder
-                float minSpeed = 0.06f;
-                delta = 0.0;
-                double maxTurning = 0.3;
-                double deltaT;
-                switch(mode) {
-                    case rotate:
-                        delta = targetAngle - (realyaw - targetAngleOffset);
+            delta = 0.0;
+            double maxTurn = 0.3;
+            double deltaT;
 
-                        deltaT = (System.nanoTime() - angleTS) / 1000000;
-                        angleTS = System.nanoTime();
+            double deadZone = 0.2;
+            double fullSpeed = 0.65;
 
-                        eIntegral += delta * deltaT;
-                        SmartDashboard.putNumber("eIntegral", eIntegral);
+            double x = 0.0;
+            double y = 0.0;
 
-                        aimInput = (delta * angleP) + (eIntegral * angleI);
+            switch(mAutoMode) {
+                case rotate:
+                    delta = targetAngle - (realyaw - targetAngleOffset);
 
-                        aimInput = (aimInput > maxTurning)? maxTurning: aimInput;
-                        aimInput = (aimInput < -maxTurning)? -maxTurning: aimInput;
-                        //
-                        aimInputy = 0;
+                    deltaT = (System.nanoTime() - angleTS) / 1000000;
+                    angleTS = System.nanoTime();
 
-                        autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
-                        break;
-                    case distance:
-                        delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
-                        aimInput = 0;
-                        aimInputy = delta * distanceP;
-                        autoConditionSatisfied = (Math.abs(delta) < 4.0);
-                        break;
-                    case curve:
-                        double angleRateP = 0.5;
-                        double angleRateI = 0.01;
+                    eIntegral += delta * deltaT;
+                    SmartDashboard.putNumber("eIntegral", eIntegral);
 
-                        double progress = ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre) / targetDistance; //0 to 1 of the distance we have traveled
-                        
-                        double distanceDelta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
-                        aimInputy = distanceDelta * distanceP;
+                    x = (delta * angleP) + (eIntegral * angleI);
 
-                        double rateDelta = targetGyroRate - (navX.getRate());
+                    x = (x > maxTurn)? maxTurn: x;
+                    x = (x < -maxTurn)? -maxTurn: x;
+                    //
+                    y = 0;
 
-                        deltaT = (System.nanoTime() - angleTS) / 100000000;
-                        angleTS = System.nanoTime();
+                    autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
+                    break;
 
-                        eIntegral += rateDelta * deltaT;
+                case distance:
+                    delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
+                    x = 0;
+                    y = delta * distanceP;
+                    autoConditionSatisfied = (Math.abs(delta) < 4.0);
+                    break;
 
-                        aimInput = (rateDelta * angleRateP) + (eIntegral * angleRateI);
+                case curve:
+                    double angleRateP = 0.5;
+                    double angleRateI = 0.01;
 
-                        aimInput = (aimInput > maxTurning)? maxTurning: aimInput;
-                        aimInput = (aimInput < -maxTurning)? -maxTurning: aimInput;
-                        break;
-                    case stop:
-                        aimInput = 0;
-                        aimInputy = 0;
-                }
-                
+                    double progress = ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre) / targetDistance; //0 to 1 of the distance we have traveled
+                    
+                    double distanceDelta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
+                    y = distanceDelta * distanceP;
 
-                aimInput = (aimInput > 1)? 1 : aimInput;
-                aimInputy = (aimInputy > 0.3)? 0.3 : aimInputy;
+                    double rateDelta = targetGyroRate - (navX.getRate());
 
-                aimInput = (aimInput < minSpeed && aimInput > 0)? minSpeed : aimInput;
-                aimInput = (aimInput > -minSpeed && aimInput < 0)? -minSpeed : aimInput;
+                    deltaT = (System.nanoTime() - angleTS) / 100000000;
+                    angleTS = System.nanoTime();
 
-                leftDrive = aimInput + aimInputy;
-                rightDrive = -aimInput + aimInputy;
+                    eIntegral += rateDelta * deltaT;
 
-                DL1Motor.set(ControlMode.PercentOutput, leftDrive);
-                DL2Motor.set(ControlMode.PercentOutput, leftDrive);
-                DR1Motor.set(ControlMode.PercentOutput, -rightDrive); //inverting
-                DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
-                
-            } else { //run the regular drive TODO: drive calculations
-                double deadZone = 0.2;
-                double fullSpeed = 0.65;
+                    x = (rateDelta * angleRateP) + (eIntegral * angleRateI);
 
+                    x = (x > maxTurn)? maxTurn: x;
+                    x = (x < -maxTurn)? -maxTurn: x;
+                    break;
 
-                //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
-                double Lt;
-                double Rt;
-                if(controllerType == ControllerType.PS5) {
-                    Lt = (driverStick.getRawAxis(3) + 1.0) / 2;
-                    Rt = (driverStick.getRawAxis(4) + 1.0) / 2;
-                } else {
-                    Lt = driverStick.getRawAxis(3);
-                    Rt = driverStick.getRawAxis(2);
-                }
+                case stop:
+                    x = 0;
+                    y = 0;
+                    break;
 
-                if(Lt < 0 || Rt < 0) {
-                    forcefulDisconnect("invalid trigger inputs " + Lt + " " + Rt);
-                    exitFlag = true;
-                    return;
-                }
+                case none: //USER control
+                    double Lt = mDriverInputManager.getLeftTrigger();
+                    double Rt = mDriverInputManager.getRightTrigger();
+                    
 
-                double y = Rt - Lt;
-
-                //double y = driverStick.getY() * -1;
-                double x = driverStick.getX();
-                
-                //deadzone calclations
-                x = (x < deadZone && x > -deadZone)? 0 : x;
-                if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
-                x = x / (1 - deadZone);
-                simOut("xval", x);
-
-                double aparam = 0.6;
-
-                x = (aparam * (x * x * x)) + ((1-aparam) * x);
-                
-                y = (y < deadZone && y > -deadZone)? 0 : y;
-                if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
-                y = y / (1 - deadZone);
-                simOut("yval", y);
-
-                leftDrive = y + x;
-                rightDrive = y - x;
-                
-                //speed scaling
-                leftDrive = leftDrive * fullSpeed; 
-                rightDrive = rightDrive * fullSpeed;
-                //speed hard cap
-                leftDrive = (leftDrive > fullSpeed)? fullSpeed : leftDrive;
-                rightDrive = (rightDrive > fullSpeed)? fullSpeed : rightDrive;
-                leftDrive = (leftDrive < -fullSpeed)? -fullSpeed : leftDrive;
-                rightDrive = (rightDrive < -fullSpeed)? -fullSpeed : rightDrive;
-
-                if(firstCycle) {
-                    if(leftDrive != 0 || rightDrive != 0) {
-                        forcefulDisconnect("manual drive state not zeroed on startup");
-                        exitFlag = true;
+                    if(Lt < 0 || Rt < 0) {
+                        forcefulDisconnect("invalid trigger inputs " + Lt + " " + Rt);
                         return;
                     }
-                    firstCycle = false;
-                }
 
-                DL1Motor.set(ControlMode.PercentOutput, leftDrive);
-                DL2Motor.set(ControlMode.PercentOutput, leftDrive);
-                DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
-                DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
-                
-                delta = realyaw - targetAngleOffset;
+                    y = Rt - Lt;
+                    x = mDriverInputManager.getLeftStickX();
+                    
+                    //deadzone calclations
+                    x = (x < deadZone && x > -deadZone)? 0 : x;
+                    if(x != 0.0) x = (x > 0.0)? x - deadZone : x + deadZone; //eliminate jump behaviour
+                    x = x / (1 - deadZone);
+                    simOut("xval", x);
+
+                    double aparam = 0.6;
+
+                    x = (aparam * (x * x * x)) + ((1-aparam) * x);
+                    
+                    y = (y < deadZone && y > -deadZone)? 0 : y;
+                    if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
+                    y = y / (1 - deadZone);
+                    simOut("yval", y);
+                    break;
             }
 
-            
-            
-            //shooterEnabled = driverStick.getRawButton(1);
-            //simOut("shooterEnabled", shooterEnabled);
-            /*if (shooterEnabled) {
-                //set the shooter motor
-                if (alignDCOK) {shooterMotor.set(ControlMode.PercentOutput, shooterInput); simOut("shooterTarget", shooterInput);} else {
-                    //failsafe needs to be updated
-                    shooterMotor.set(ControlMode.PercentOutput, 0.5);
-                    simOut("shooterTarget", shooterInput);
+            leftDrive = y + x;
+            rightDrive = y - x;
+
+            //speed scaling
+            leftDrive = leftDrive * fullSpeed; 
+            rightDrive = rightDrive * fullSpeed;
+
+            //speed hard cap
+            leftDrive = (leftDrive > fullSpeed)? fullSpeed : leftDrive;
+            rightDrive = (rightDrive > fullSpeed)? fullSpeed : rightDrive;
+            leftDrive = (leftDrive < -fullSpeed)? -fullSpeed : leftDrive;
+            rightDrive = (rightDrive < -fullSpeed)? -fullSpeed : rightDrive;
+
+            if(firstCycle) {
+                if(leftDrive != 0 || rightDrive != 0) {
+                    forcefulDisconnect("drive state not zeroed on startup");
+                    return;
                 }
-            } else {
-                shooterInput = 0;
-                simOut("shooterTarget", shooterInput);
-                shooterMotor.set(ControlMode.PercentOutput, 0.0);
-            }*/
+                firstCycle = false;
+            }
+
+            DL1Motor.set(ControlMode.PercentOutput, leftDrive);
+            DL2Motor.set(ControlMode.PercentOutput, leftDrive);
+            DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
+            DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
+            
+            
             
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 1000000) {
                 //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
             }
-
-
-            //TODO: improve RTDrive thread timing
-            //try {Thread.sleep(1);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
         System.out.println("[RTDrive] left independent service");

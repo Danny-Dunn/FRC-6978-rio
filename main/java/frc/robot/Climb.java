@@ -6,8 +6,9 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Climb implements Runnable, ServiceableModule {
-    Joystick driveStick;
-    Joystick operatorStick;
+    Thread mThread;
+    
+    InputManager mOperatorInputManager;
 
     TalonSRX CBRMotor; 
     TalonSRX CBLMotor; 
@@ -26,9 +27,8 @@ public class Climb implements Runnable, ServiceableModule {
     double pullingPower = -0.5;
     double pushingPower = 0.2;
 
-    public Climb(Joystick driveStick, Joystick operatorStick) {
-        this.driveStick = driveStick;
-        this.operatorStick = operatorStick;
+    public Climb(InputManager inputManager) {
+        mOperatorInputManager = inputManager;
     }
 
     boolean autoConditionSatisfied;
@@ -67,6 +67,36 @@ public class Climb implements Runnable, ServiceableModule {
         motor.set(ControlMode.PercentOutput, output);
     }
 
+    public boolean start() {
+        boolean ret;
+
+        ret = mOperatorInputManager.map();
+        if(!ret) return ret;
+
+        exitFlag = false;
+
+        mThread = new Thread(this, "RTDrive");
+        mThread.start();
+
+        return true;
+    }
+
+    public boolean stop() {
+        if(mThread == null) return true;
+        exitFlag = true;
+        try {Thread.sleep(20);} catch (Exception e) {}
+
+        if(mThread.isAlive()) {
+            mThread.interrupt();
+            try {Thread.sleep(20);} catch (Exception e) {}
+            if(mThread.isAlive()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("CFL Current", CFLMotor.getStatorCurrent());
         SmartDashboard.putNumber("CFR Current", CFRMotor.getStatorCurrent());
@@ -82,11 +112,11 @@ public class Climb implements Runnable, ServiceableModule {
         System.out.println("[Climb] entered independent service");
         while(!exitFlag) {
             
-            if(operatorStick.getRawButton(7)){ //front pull 
+            if(mOperatorInputManager.getLeftTriggerDigital()){ //front pull 
                 frontState = true;
                 CFLMotor.set(ControlMode.PercentOutput, pullingPower);
                 CFRMotor.set(ControlMode.PercentOutput, pullingPower);
-            } else if (operatorStick.getRawButton(5)) { //front release
+            } else if (mOperatorInputManager.getLeftBumper()) { //front release
                 frontState = false;
                 CFLMotor.set(ControlMode.PercentOutput, pushingPower);
                 CFRMotor.set(ControlMode.PercentOutput, pushingPower);
@@ -99,11 +129,11 @@ public class Climb implements Runnable, ServiceableModule {
                 CFRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            if(operatorStick.getRawButton(8)){ //back pull 
+            if(mOperatorInputManager.getRightTriggerDigital()){ //back pull 
                 backState = true;
                 CBLMotor.set(ControlMode.PercentOutput, pullingPower);
                 CBRMotor.set(ControlMode.PercentOutput, pullingPower);
-            } else if (operatorStick.getRawButton(6)) { //back release
+            } else if (mOperatorInputManager.getRightBumper()) { //back release
                 backState = false;
                 CBLMotor.set(ControlMode.PercentOutput, pushingPower);
                 CBRMotor.set(ControlMode.PercentOutput, pushingPower);
@@ -116,9 +146,9 @@ public class Climb implements Runnable, ServiceableModule {
                 CBRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            if(operatorStick.getRawButton(1)) {
+            if(mOperatorInputManager.getWestButton()) {
                 HookCarriageMotor.set(ControlMode.PercentOutput, 0.15);
-            } else if(operatorStick.getRawButton(3)) {
+            } else if(mOperatorInputManager.getEastButton()) {
                 HookCarriageMotor.set(ControlMode.PercentOutput, -0.15);
             } else {
                 HookCarriageMotor.set(ControlMode.PercentOutput, 0);

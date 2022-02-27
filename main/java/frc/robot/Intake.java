@@ -10,7 +10,9 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Intake implements Runnable, ServiceableModule{
-    Joystick operatorStick; //joystick(only used for button inputs)
+    private Thread mThread;
+
+    InputManager mOperatorInputManager;
 
     TalonSRX intakeLiftMotor; //retracts ball pickup structure into robot
     TalonSRX intakeRollerMotor; //drives rollers to pick up cargo
@@ -26,8 +28,8 @@ public class Intake implements Runnable, ServiceableModule{
     double intakeUpperPosition = -15;
     double intakeHorizontalBias = 0.14;
 
-    public Intake(Joystick operatorStick) {
-        this.operatorStick = operatorStick;
+    public Intake(InputManager inputManager) {
+        mOperatorInputManager = inputManager;
     }
 
     public void simOut(String tag, Double value) {
@@ -45,6 +47,36 @@ public class Intake implements Runnable, ServiceableModule{
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
 
         System.out.println("[Intake] finished initialisation");
+        return true;
+    }
+
+    public boolean start() {
+        boolean ret;
+
+        ret = mOperatorInputManager.map();
+        if(!ret) return ret;
+
+        exitFlag = false;
+
+        mThread = new Thread(this, "RTDrive");
+        mThread.start();
+
+        return true;
+    }
+
+    public boolean stop() {
+        if(mThread == null) return true;
+        exitFlag = true;
+        try {Thread.sleep(20);} catch (Exception e) {}
+
+        if(mThread.isAlive()) {
+            mThread.interrupt();
+            try {Thread.sleep(20);} catch (Exception e) {}
+            if(mThread.isAlive()) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -88,7 +120,7 @@ public class Intake implements Runnable, ServiceableModule{
             lastCalcTS = System.nanoTime();
 
             if(intakeFineAdjustEnabled) {
-                double y = -operatorStick.getY();
+                double y = -mOperatorInputManager.getLeftStickY();
                 y = (y < deadZone && y > -deadZone)? 0 : y;
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                 y = y / (1 - deadZone); 
@@ -99,9 +131,9 @@ public class Intake implements Runnable, ServiceableModule{
             intakeTargetPosition = (intakeTargetPosition > intakeFullOutPosition)? intakeFullOutPosition : intakeTargetPosition;
             intakeTargetPosition = (intakeTargetPosition < intakeParkPosition)? intakeParkPosition : intakeTargetPosition;            
 
-            if(operatorStick.getPOV() == 0) { //set the intake forward
+            if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
                 intakeTargetPosition = intakeFullOutPosition;
-            } else if(operatorStick.getPOV() == 180) {
+            } else if(mOperatorInputManager.getPOV() == 180) {
                 intakeTargetPosition = intakeParkPosition;
             }
             
@@ -114,7 +146,7 @@ public class Intake implements Runnable, ServiceableModule{
             intakeLiftMotor.set(ControlMode.PercentOutput, liftOut);
 
             if(rollerFineAdjustEnabled) {
-                double y = operatorStick.getRawAxis(3);
+                double y = mOperatorInputManager.getRightStickY();
                 y = (y < deadZone && y > -deadZone)? 0 : y;
                 if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                 y = y / (1 - deadZone); 
@@ -123,9 +155,9 @@ public class Intake implements Runnable, ServiceableModule{
 
                 simOut("Intake Roller Out", y);
                 intakeRollerMotor.set(ControlMode.PercentOutput, y);
-            } else if(operatorStick.getRawButton(2)) {
+            } else if(mOperatorInputManager.getSouthButton()) {
                 intakeRollerMotor.set(ControlMode.PercentOutput, rollerInSpeed);
-            } else if(operatorStick.getRawButton(4)) {
+            } else if(mOperatorInputManager.getNorthButton()) {
                 intakeRollerMotor.set(ControlMode.PercentOutput, rollerOutSpeed);
             }
 
