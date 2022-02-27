@@ -74,6 +74,11 @@ public class AlignDriveCamera implements Runnable {
         new AutoCommand(430, 146), //go near driver station
     };
 
+    /*AutoCommand commands[] = {
+        new AutoCommand(100, 0),
+        new AutoCommand(0, 0)
+    };*/
+
     double dx;
     double dy;
 
@@ -134,6 +139,7 @@ public class AlignDriveCamera implements Runnable {
             
             SmartDashboard.putNumber("autoState", autoState);
             SmartDashboard.putNumber("targetPOint", pointNum);
+            SmartDashboard.putString("driveMode", RTDrive.mode.toString());
 
             if(driveStick.getRawButton(7)) {//test auto code
                 
@@ -157,6 +163,7 @@ public class AlignDriveCamera implements Runnable {
                                 break;
                             case RotateToAngle:
                                 autoState = 2;
+                                break;
                             default:
                                 pointNum++;
                                 break;
@@ -168,6 +175,7 @@ public class AlignDriveCamera implements Runnable {
                         dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
                         if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 6.0) { //check if we are already close enough
                             pointNum++;
+                            autoState = 0;
                         } else {
                             autoState++;
                         }
@@ -179,18 +187,21 @@ public class AlignDriveCamera implements Runnable {
                                 dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
                                 dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
                                 RTDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
+                                RTDrive.setDriveMode(DriveMode.rotate);
                                 autoState++;
                                 break;
                             case RotateToAngle:
+                                System.out.println("[AlignDC] rot to angle");
                                 RTDrive.targetAngle = commands[pointNum].aparam; 
+                                RTDrive.setDriveMode(DriveMode.rotate);
+                                autoState++;
+                                break;
                             default:
                                 autoState = 0;
+                                break;
 
                         }
                         
-                        
-                        RTDrive.setDriveMode(DriveMode.rotate);
-                        autoState++;
                         break;
                     case 3:
                         if(RTDrive.autoConditionSatisfied) {
@@ -200,6 +211,8 @@ public class AlignDriveCamera implements Runnable {
                                     break;
                                 default:
                                     autoState = 0;
+                                    pointNum++;
+                                    break;
 
                             }
                             
@@ -222,6 +235,7 @@ public class AlignDriveCamera implements Runnable {
                             } else {
                                 autoState = 2;
                             }
+                            RTDrive.setDriveMode(DriveMode.stop);
                         }
                         break;
                     default:
@@ -236,6 +250,5 @@ public class AlignDriveCamera implements Runnable {
             //throws InterruptedException {Thread.sleep(10);}
             try {Thread.sleep(3);} catch (InterruptedException ie) {} //prevents the thread from running too fast
         }
-        intakeLiftMotor.set(ControlMode.PercentOutput, 0);
     }
 }
