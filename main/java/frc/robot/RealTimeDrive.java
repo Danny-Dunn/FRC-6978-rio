@@ -271,6 +271,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
         SmartDashboard.putNumber("gyroRate", navX.getRate());
 
+        SmartDashboard.putNumber("SpeedL", DL1Motor.getSelectedSensorVelocity());
+        SmartDashboard.putNumber("SpeedR", -DR1Motor.getSelectedSensorVelocity());
+
         if(takeConfigOptions) {
             angleP = SmartDashboard.getNumber("angleP", 0.0015);
             angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
@@ -393,7 +396,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 
             } else { //run the regular drive TODO: drive calculations
                 double deadZone = 0.2;
-                double fullSpeed = 1.0;
+                double fullSpeed = 0.65;
 
 
                 //     TriggerDrive(driveStick.getRawAxis(0), driveStick.getRawAxis(2), driveStick.getRawAxis(3));
