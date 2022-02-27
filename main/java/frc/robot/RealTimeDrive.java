@@ -387,8 +387,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 double Lt;
                 double Rt;
                 if(controllerType == ControllerType.PS5) {
-                    Lt = (driverStick.getRawAxis(2) + 1.0) / 2;
-                    Rt = (driverStick.getRawAxis(5) + 1.0) / 2;
+                    Lt = (driverStick.getRawAxis(3) + 1.0) / 2;
+                    Rt = (driverStick.getRawAxis(4) + 1.0) / 2;
                 } else {
                     Lt = driverStick.getRawAxis(3);
                     Rt = driverStick.getRawAxis(2);
