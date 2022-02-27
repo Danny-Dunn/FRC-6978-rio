@@ -296,6 +296,19 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         exitFlag = false; //clear flag on start
         SmartDashboard.putBoolean("RTDrive OK", true);
         firstCycle = true;
+
+        if(driverStick.getName().equals("Wireless Controller")) {
+            System.out.println("[RTDrive] detected PS5 controller, switching mapping");
+            controllerType = ControllerType.PS5;
+            calibrateButton = 10;
+            autoButton = 9;
+        } else {
+            controllerType = ControllerType.standard;
+            System.out.println("[RTDrive] using default mapping");
+            calibrateButton = 8;
+            autoButton = 7;
+        }
+
         while (!exitFlag) {
             long start = System.nanoTime();
             
