@@ -1,7 +1,5 @@
 package frc.robot;
 
-import java.util.ResourceBundle.Control;
-
 import edu.wpi.first.wpilibj.Joystick;
 
 public class InputManager {
@@ -26,14 +24,16 @@ public class InputManager {
                 break;
 
             case "Logitech Dual Action": //TODO: logitech controller names
-                mControllerType = ControllerType.logitechAnalog;
-                break;
-            case "L":
                 mControllerType = ControllerType.logitechDigital;
                 break;
+            case "Controller (Gamepad F310)":
+                mControllerType = ControllerType.logitechAnalog;
+                break;
+
             default:
                 return false;
         }
+        System.out.println("[InputManager] detected " + mControllerType.toString() + " controller");
         return true;
     }
 
