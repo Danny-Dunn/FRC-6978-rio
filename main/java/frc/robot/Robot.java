@@ -6,11 +6,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.I2C.Port;
-//import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.Joystick;
 import com.kauailabs.navx.frc.AHRS;
-
-import java.lang.Thread;
 
 //THIS class will handle threads and driverstation/FMS major events
 public class Robot extends TimedRobot {
@@ -41,10 +37,10 @@ public class Robot extends TimedRobot {
     
     navX = new AHRS(Port.kMXP);
     mRealTimeDrive = new RealTimeDrive(mDriverInputManager, navX);
-    mAutonomousController = new AutonomousController(mRealTimeDrive);
     mIntake = new Intake(mOperatorInputManager);
     mClimb = new Climb(mOperatorInputManager);
     mShooter = new Shooter(mDriverInputManager);
+    mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake);
 
     
     mRealTimeDrive.init();
@@ -68,7 +64,7 @@ public class Robot extends TimedRobot {
 
     mRealTimeDrive.start();
 
-    mIntake.start();
+    mIntake.start(true);
     mShooter.start();
 
     mAutonomousController.init();
@@ -91,7 +87,7 @@ public class Robot extends TimedRobot {
     
     mRealTimeDrive.start();
     mClimb.start();
-    mIntake.start();
+    mIntake.start(false);
     mShooter.start();
     //pneumatics_thread.start();
   }
