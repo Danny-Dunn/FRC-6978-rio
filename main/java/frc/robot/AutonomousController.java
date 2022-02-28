@@ -1,7 +1,5 @@
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -10,7 +8,6 @@ import edu.wpi.first.wpilibj.drive.Vector2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RealTimeDrive.AutoMode;
 import frc.robot.AutoCommand.CommandType;
-import edu.wpi.first.wpilibj.Joystick;
 
 
 
@@ -27,7 +24,8 @@ public class AutonomousController implements Runnable, ServiceableModule {
     long pidYTimeStamp;
     boolean pidPreviousState;
 
-    RealTimeDrive RTDrive;
+    RealTimeDrive mRealTimeDrive;
+    Intake mIntake;
 
     long checkIn;
 
@@ -60,9 +58,9 @@ public class AutonomousController implements Runnable, ServiceableModule {
     };
 
     AutoCommand commands[] = {
-        new AutoCommand(CommandType.SetIntake, 100, 0),
+        new AutoCommand(CommandType.SetIntake, 500, 0),
         new AutoCommand(82, 0),
-        new AutoCommand(CommandType.SetIntake, 100, 0.6),
+        new AutoCommand(CommandType.SetIntake, 500, 0.75),
         new AutoCommand(96, 0),
         new AutoCommand(CommandType.SetIntake, 0, 0),
         new AutoCommand(CommandType.RotateToAngle, 180, 0),
@@ -78,8 +76,9 @@ public class AutonomousController implements Runnable, ServiceableModule {
     double dx;
     double dy;
 
-    public AutonomousController(RealTimeDrive RTDrive) {
-        this.RTDrive = RTDrive;
+    public AutonomousController(RealTimeDrive RTDrive, Intake intake) {
+        mRealTimeDrive = RTDrive;
+        mIntake = intake;
     }
     
     public boolean init() { //setup nettables for the camera
@@ -104,7 +103,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
         autoState = 0;
         pointNum = 0;
 
-        mThread = new Thread(this, "RTDrive");
+        mThread = new Thread(this, "AutonomousController");
         mThread.start();
 
         return true;
@@ -160,7 +159,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
             
             SmartDashboard.putNumber("autoState", autoState);
             SmartDashboard.putNumber("targetPoint", pointNum);
-            SmartDashboard.putString("driveMode", RTDrive.mAutoMode.toString());
+            //SmartDashboard.putString("driveMode", mRealTimeDrive.mAutoMode.toString());
 
             
                 
@@ -176,6 +175,8 @@ public class AutonomousController implements Runnable, ServiceableModule {
                             break;
                         case SetIntake:
                             //set intake
+                            mIntake.setLift(commands[pointNum].aparam);
+                            mIntake.setRollers(commands[pointNum].bparam);
                             pointNum++;
                             break;
                         case SetShooter:
@@ -192,8 +193,8 @@ public class AutonomousController implements Runnable, ServiceableModule {
                     break;
                 case 1: // start driving to point
                     
-                    dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
-                    dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
+                    dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                    dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
                     if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 6.0) { //check if we are already close enough
                         pointNum++;
                         autoState = 0;
@@ -205,16 +206,16 @@ public class AutonomousController implements Runnable, ServiceableModule {
                 case 2: //rotate to angle
                     switch(commands[pointNum].type) {
                         case DriveToPoint:
-                            dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
-                            dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
-                            RTDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
-                            RTDrive.setDriveMode(AutoMode.rotate);
+                            dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                            dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
+                            mRealTimeDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
+                            mRealTimeDrive.setDriveMode(AutoMode.rotate);
                             autoState++;
                             break;
                         case RotateToAngle:
                             System.out.println("[AlignDC] rot to angle");
-                            RTDrive.targetAngle = commands[pointNum].aparam; 
-                            RTDrive.setDriveMode(AutoMode.rotate);
+                            mRealTimeDrive.targetAngle = commands[pointNum].aparam; 
+                            mRealTimeDrive.setDriveMode(AutoMode.rotate);
                             autoState++;
                             break;
                         default:
@@ -225,7 +226,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
                     
                     break;
                 case 3:
-                    if(RTDrive.autoConditionSatisfied) {
+                    if(mRealTimeDrive.autoConditionSatisfied) {
                         switch(commands[pointNum].type) {
                             case DriveToPoint:
                                 autoState++;
@@ -240,24 +241,30 @@ public class AutonomousController implements Runnable, ServiceableModule {
                     }
                     break;
                 case 4:
-                    dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
-                    dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
-                    RTDrive.targetDistance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0));
-                    RTDrive.setDriveMode(AutoMode.distance);
+                    dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                    dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
+                    mRealTimeDrive.targetDistance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0));
+                    mRealTimeDrive.setDriveMode(AutoMode.distance);
                     autoState++;
                     break;
                 case 5:
-                    if(RTDrive.autoConditionSatisfied) {
-                        dy = commands[pointNum].point.y - RTDrive.currentPosition.y;
-                        dx = commands[pointNum].point.x - RTDrive.currentPosition.x;
+                    if(mRealTimeDrive.autoConditionSatisfied) {
+                        dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                        dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
                         if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 15.0) {
                             pointNum++;
                             autoState = 0;
                         } else {
                             autoState = 2;
                         }
-                        RTDrive.setDriveMode(AutoMode.stop);
+                        mRealTimeDrive.setDriveMode(AutoMode.stop);
                     }
+                    break;
+                case 6: //await intake
+                    if(mIntake.getAutoConditionSatisfied()) {
+                        pointNum++;
+                        autoState = 0;
+                    } 
                     break;
                 default:
                     break;
