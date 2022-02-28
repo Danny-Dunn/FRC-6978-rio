@@ -3,8 +3,6 @@ package frc.robot;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 
-import java.util.Map;
-
 import com.ctre.phoenix.motorcontrol.ControlMode;
 
 import com.kauailabs.navx.frc.AHRS;
@@ -13,7 +11,6 @@ import edu.wpi.first.networktables.NetworkTable;
 //import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.drive.Vector2d;
 
@@ -238,6 +235,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
         currentPosition = new Vector2d(0, 0);
         ret = calibrateTracking(false);
+        System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
+
 
         ret = mDriverInputManager.map();
         if(!ret) return ret;
@@ -246,6 +245,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
         mThread = new Thread(this, "RTDrive");
         mThread.start();
+
+        mAutoMode = AutoMode.none;
 
         return true;
     }
@@ -273,15 +274,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         simOut("leftDrive", leftDrive);
         simOut("rightDrive", rightDrive);
 
-        SmartDashboard.putNumber("DL1 Temp", DL1Motor.getTemperature());
-        SmartDashboard.putNumber("DL2 Temp", DL2Motor.getTemperature());
-        SmartDashboard.putNumber("DR1 Temp", DR1Motor.getTemperature());
-        SmartDashboard.putNumber("DR2 Temp", DR2Motor.getTemperature());
+        SmartDashboard.putNumber("DL1Temp", DL1Motor.getTemperature());
+        SmartDashboard.putNumber("DL2Temp", DL2Motor.getTemperature());
+        SmartDashboard.putNumber("DR1Temp", DR1Motor.getTemperature());
+        SmartDashboard.putNumber("DR2Temp", DR2Motor.getTemperature());
 
-        SmartDashboard.putNumber("DL1 Current", DL1Motor.getStatorCurrent());
-        SmartDashboard.putNumber("DL2 Current", DL2Motor.getStatorCurrent());
-        SmartDashboard.putNumber("DR1 Current", DR1Motor.getStatorCurrent());
-        SmartDashboard.putNumber("DR2 Current", DR2Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DL1Current", DL1Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DL2Current", DL2Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DR1Current", DR1Motor.getStatorCurrent());
+        SmartDashboard.putNumber("DR2Current", DR2Motor.getStatorCurrent());
 
         SmartDashboard.putNumber("targetDelta", delta);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
@@ -297,13 +298,14 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("Yaw", realyaw);
         SmartDashboard.putNumber("absYaw", absyaw);
 
+        if(mAutoMode != null)
         SmartDashboard.putString("autoMode", mAutoMode.toString());
 
         if(takeConfigOptions) {
             angleP = SmartDashboard.getNumber("angleP", 0.0015);
             angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
             angleI = SmartDashboard.getNumber("angleI", 0.00084);
-            distanceP = SmartDashboard.getNumber("distanceP", 0.002);
+            distanceP = SmartDashboard.getNumber("distanceP", 0.0045);
         }
     }
 
@@ -369,14 +371,14 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
                     x = 0;
                     y = delta * distanceP;
-                    autoConditionSatisfied = (Math.abs(delta) < 4.0);
+                    autoConditionSatisfied = (Math.abs(delta) < 2.0);
                     break;
 
                 case curve:
                     double angleRateP = 0.5;
                     double angleRateI = 0.01;
 
-                    double progress = ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre) / targetDistance; //0 to 1 of the distance we have traveled
+                    //double progress = ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre) / targetDistance; //0 to 1 of the distance we have traveled
                     
                     double distanceDelta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
                     y = distanceDelta * distanceP;
@@ -403,12 +405,12 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     double Lt = mDriverInputManager.getLeftTrigger();
                     double Rt = mDriverInputManager.getRightTrigger();
                     
-
+                    
                     if(Lt < 0 || Rt < 0) {
                         forcefulDisconnect("invalid trigger inputs " + Lt + " " + Rt);
                         return;
                     }
-
+                    
                     y = Rt - Lt;
                     x = mDriverInputManager.getLeftStickX();
                     
@@ -459,8 +461,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
-            if(elapsedTime > 1000000) {
-                //System.out.println("[RTDrive] Motion processing took longer than 1ms! Took " + elapsedTime + "uS");
+            if(elapsedTime > 2000000) {
+                System.out.println("[RTDrive] Motion processing took longer than 2ms! Took " + elapsedTime + "uS");
             }
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
