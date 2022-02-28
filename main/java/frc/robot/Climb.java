@@ -2,7 +2,6 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Climb implements Runnable, ServiceableModule {
@@ -75,7 +74,7 @@ public class Climb implements Runnable, ServiceableModule {
 
         exitFlag = false;
 
-        mThread = new Thread(this, "RTDrive");
+        mThread = new Thread(this, "Climb");
         mThread.start();
 
         return true;

@@ -2,7 +2,6 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter implements Runnable, ServiceableModule {
@@ -31,6 +30,7 @@ public class Shooter implements Runnable, ServiceableModule {
             default:
                 break;
         }
+        mShooterControlMode = mode;
     }
 
     private long integralTS;
@@ -69,7 +69,7 @@ public class Shooter implements Runnable, ServiceableModule {
 
         exitFlag = false;
 
-        mThread = new Thread(this, "RTDrive");
+        mThread = new Thread(this, "Shooter");
         mThread.start();
 
         return true;
@@ -94,6 +94,8 @@ public class Shooter implements Runnable, ServiceableModule {
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
         SmartDashboard.putNumber("Shooter Current", shooterMotor.getStatorCurrent());
+
+        SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
 
         if(takeConfigOptions) {
             shooterPower = SmartDashboard.getNumber("Shooter Power", 0.6);

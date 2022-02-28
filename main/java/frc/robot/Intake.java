@@ -58,7 +58,7 @@ public class Intake implements Runnable, ServiceableModule{
 
         exitFlag = false;
 
-        mThread = new Thread(this, "RTDrive");
+        mThread = new Thread(this, "Intake");
         mThread.start();
 
         return true;
