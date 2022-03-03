@@ -40,11 +40,12 @@ public class Robot extends TimedRobot {
     mIntake = new Intake(mOperatorInputManager);
     mClimb = new Climb(mOperatorInputManager);
     mShooter = new Shooter(mDriverInputManager);
-    mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake);
+    mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake, mShooter);
 
     
     mRealTimeDrive.init();
     mIntake.init();
+    mAutonomousController.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -56,16 +57,17 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     mRealTimeDrive.standby(true);
     mIntake.standby(true);
+    mAutonomousController.standby(false);
   }
 
   //auto
   @Override
   public void autonomousInit() {
-
+    mShooter.init();
     mRealTimeDrive.start();
 
     mIntake.start(true);
-    mShooter.start();
+    mShooter.start(true);
 
     mAutonomousController.init();
     mAutonomousController.start();
@@ -74,7 +76,7 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    
+    mShooter.standby(true);
   }
 
   /** This function is called once when teleop is enabled. */
