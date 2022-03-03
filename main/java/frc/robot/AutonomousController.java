@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.drive.Vector2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RealTimeDrive.AutoMode;
+import frc.robot.Shooter.ShooterControlMode;
 import frc.robot.AutoCommand.CommandType;
 
 
@@ -18,7 +19,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
     NetworkTableEntry tp; //target present
     NetworkTableEntry tx; //target x
     NetworkTableEntry ty; //target y
-    double targetHeight = 7.0; //height off ground
+    double targetHeight = 176.5; //height off ground
 
     long pidXTimeStamp;
     long pidYTimeStamp;
@@ -26,8 +27,12 @@ public class AutonomousController implements Runnable, ServiceableModule {
 
     RealTimeDrive mRealTimeDrive;
     Intake mIntake;
+    Shooter mShooter;
 
     long checkIn;
+
+    private long delayTS;
+    private long currentDelay;
 
     double startTimeStamp;
 
@@ -58,13 +63,17 @@ public class AutonomousController implements Runnable, ServiceableModule {
     };
 
     AutoCommand commands[] = {
-        new AutoCommand(CommandType.SetIntake, 500, 0),
-        new AutoCommand(82, 0),
-        new AutoCommand(CommandType.SetIntake, 500, 0.75),
-        new AutoCommand(96, 0),
+        new AutoCommand(CommandType.SetIntake, 400, 0.75),
+        new AutoCommand(CommandType.Delay, 1000, 0),
+        new AutoCommand(122, 0),
+        new AutoCommand(CommandType.SetIntake, 650, 0.75),
+        //new AutoCommand(96, 0),
         new AutoCommand(CommandType.SetIntake, 0, 0),
+        new AutoCommand(CommandType.SetShooter, 1, 0), //fire 2 balls
         new AutoCommand(CommandType.RotateToAngle, 180, 0),
-        new AutoCommand(CommandType.SetShooter, 14000, 2), //fire 2 balls
+        new AutoCommand(CommandType.SetShooter, 1, 1), //fire 2 balls
+        new AutoCommand(CommandType.Delay, 1500, 0),
+        new AutoCommand(CommandType.SetShooter, 0, 0), //fire 2 balls
         new AutoCommand(430, 146), //go near driver station
     };
 
@@ -76,9 +85,10 @@ public class AutonomousController implements Runnable, ServiceableModule {
     double dx;
     double dy;
 
-    public AutonomousController(RealTimeDrive RTDrive, Intake intake) {
+    public AutonomousController(RealTimeDrive RTDrive, Intake intake, Shooter shooter) {
         mRealTimeDrive = RTDrive;
         mIntake = intake;
+        mShooter = shooter;
     }
     
     public boolean init() { //setup nettables for the camera
@@ -128,25 +138,25 @@ public class AutonomousController implements Runnable, ServiceableModule {
     }
 
     public void standby(boolean takeInputs) {
+        SmartDashboard.putNumber("estimatedDistance", calcDistance(ty.getDouble(0)));
+        SmartDashboard.putNumber("tY", ty.getDouble(0));
         return;
     }
 
     double calcDistance(double camY) {
-        double fov = 49.7; //vertical for limelight 2+
-        double angle = ((camY + 1.0) / 2) * fov;
-        angle = angle + 90;
+        double angle = camY + 39;
+        //angle = angle;
         //circle math
-        double radius = 1.0;
 		double radians = Math.toRadians(angle);
-		double tpy = radius * Math.sin(radians);
-		double tpx = radius * Math.cos(radians);
+		double tpy = Math.sin(radians);
+		double tpx = Math.cos(radians);
 		//calculate slope ratio
 		double slope = (tpx / tpy); 
         //x = (y - height) / sl
         //NOTE: Target height is offset above robot
 		double x_intersect = (0 - targetHeight) / slope;
 		if (x_intersect < 6.0) {
-			x_intersect = 6.0; //? cant remember why, might remove
+			//x_intersect = 6.0; //? cant remember why, might remove
 		}
 		return x_intersect;
     }
@@ -158,7 +168,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
         while(!exitFlag) {
             
             SmartDashboard.putNumber("autoState", autoState);
-            SmartDashboard.putNumber("targetPoint", pointNum);
+            SmartDashboard.putNumber("commandIndex", pointNum);
             //SmartDashboard.putString("driveMode", mRealTimeDrive.mAutoMode.toString());
 
             
@@ -181,10 +191,24 @@ public class AutonomousController implements Runnable, ServiceableModule {
                             break;
                         case SetShooter:
                             //set shooter
-                            pointNum++;
+                            if(commands[pointNum].aparam != 0) {
+                                mShooter.setShooterControlMode(ShooterControlMode.velocity);
+                            } else {
+                                mShooter.setShooterControlMode(ShooterControlMode.none);
+                            }
+                            if(commands[pointNum].bparam != 0) {
+                                autoState = 6;
+                            } else {
+                                pointNum++;
+                            }
                             break;
                         case RotateToAngle:
                             autoState = 2;
+                            break;
+                        case Delay:
+                            delayTS = System.nanoTime();
+                            currentDelay = (long)commands[pointNum].aparam * 1000000l;
+                            autoState = 7;
                             break;
                         default:
                             pointNum++;
@@ -260,12 +284,17 @@ public class AutonomousController implements Runnable, ServiceableModule {
                         mRealTimeDrive.setDriveMode(AutoMode.stop);
                     }
                     break;
-                case 6: //await intake
-                    if(mIntake.getAutoConditionSatisfied()) {
+                case 6: //await shooter
+                    if(mShooter.getAutoConditionSatisfied()) {
                         pointNum++;
                         autoState = 0;
                     } 
                     break;
+                case 7:
+                    if(System.nanoTime() > delayTS + currentDelay) {
+                        pointNum++;
+                        autoState = 0;
+                    }
                 default:
                     break;
                 
@@ -273,6 +302,8 @@ public class AutonomousController implements Runnable, ServiceableModule {
             SmartDashboard.putNumber("DeltaX", dx);
             SmartDashboard.putNumber("DeltaY", dy);
             
+            
+
 
             checkIn = System.currentTimeMillis();
             //throws InterruptedException {Thread.sleep(10);}

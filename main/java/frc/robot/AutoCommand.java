@@ -8,7 +8,8 @@ public class AutoCommand {
         DriveToPoint,
         SetIntake,
         DriveDistance,
-        SetShooter
+        SetShooter,
+        Delay
     };
 
     CommandType type;
