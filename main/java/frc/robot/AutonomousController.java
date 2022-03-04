@@ -62,17 +62,16 @@ public class AutonomousController implements Runnable, ServiceableModule {
     };
 
     AutoCommand commands[] = {
-        new AutoCommand(CommandType.SetIntake, 400, 0.75),
+        new AutoCommand(CommandType.SetIntake, 750, 0.75),
         new AutoCommand(CommandType.Delay, 1000, 0),
         new AutoCommand(122, 0),
         new AutoCommand(CommandType.SetIntake, 650, 0.75),
-        //new AutoCommand(96, 0),
         new AutoCommand(CommandType.SetIntake, 0, 0),
-        new AutoCommand(CommandType.SetShooter, 1, 0), //fire 2 balls
+        new AutoCommand(CommandType.SetShooter, 1, 0), 
         new AutoCommand(CommandType.RotateToAngle, 180, 0),
-        new AutoCommand(CommandType.SetShooter, 1, 1), //fire 2 balls
-        new AutoCommand(CommandType.Delay, 1500, 0),
-        new AutoCommand(CommandType.SetShooter, 0, 0), //fire 2 balls
+        new AutoCommand(CommandType.SetShooter, 1, 1), 
+        new AutoCommand(CommandType.Delay, 2000, 0), //wait while it fires
+        new AutoCommand(CommandType.SetShooter, 0, 0),
         new AutoCommand(430, 146), //go near driver station
     };
 
@@ -137,7 +136,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
     }
 
     public void standby(boolean takeInputs) {
-
+        
         return;
     }
 
