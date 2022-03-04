@@ -424,9 +424,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
                     x = (aparam * (x * x * x)) + ((1-aparam) * x);
                     
-                    y = (y < deadZone && y > -deadZone)? 0 : y;
-                    if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
-                    y = y / (1 - deadZone);
+                    //y = (y < deadZone && y > -deadZone)? 0 : y;
+                    //if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
+                    //y = y / (1 - deadZone);
                     simOut("yval", y);
                     break;
             }
