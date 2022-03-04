@@ -19,7 +19,6 @@ public class AutonomousController implements Runnable, ServiceableModule {
     NetworkTableEntry tp; //target present
     NetworkTableEntry tx; //target x
     NetworkTableEntry ty; //target y
-    double targetHeight = 176.5; //height off ground
 
     long pidXTimeStamp;
     long pidYTimeStamp;
@@ -138,27 +137,8 @@ public class AutonomousController implements Runnable, ServiceableModule {
     }
 
     public void standby(boolean takeInputs) {
-        SmartDashboard.putNumber("estimatedDistance", calcDistance(ty.getDouble(0)));
-        SmartDashboard.putNumber("tY", ty.getDouble(0));
-        return;
-    }
 
-    double calcDistance(double camY) {
-        double angle = camY + 39;
-        //angle = angle;
-        //circle math
-		double radians = Math.toRadians(angle);
-		double tpy = Math.sin(radians);
-		double tpx = Math.cos(radians);
-		//calculate slope ratio
-		double slope = (tpx / tpy); 
-        //x = (y - height) / sl
-        //NOTE: Target height is offset above robot
-		double x_intersect = (0 - targetHeight) / slope;
-		if (x_intersect < 6.0) {
-			//x_intersect = 6.0; //? cant remember why, might remove
-		}
-		return x_intersect;
+        return;
     }
 
     public boolean exitFlag = false;

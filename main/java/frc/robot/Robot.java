@@ -20,6 +20,7 @@ public class Robot extends TimedRobot {
   PneumaticController pneumatics;
   Climb mClimb;
   Shooter mShooter;
+  LimelightController mLimelightController;
 
 
   AHRS navX;
@@ -41,11 +42,12 @@ public class Robot extends TimedRobot {
     mClimb = new Climb(mOperatorInputManager);
     mShooter = new Shooter(mDriverInputManager);
     mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake, mShooter);
+    mLimelightController = new LimelightController(mRealTimeDrive);
 
     
     mRealTimeDrive.init();
     mIntake.init();
-    mAutonomousController.init();
+    mLimelightController.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -57,7 +59,7 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     mRealTimeDrive.standby(true);
     mIntake.standby(true);
-    mAutonomousController.standby(false);
+    mLimelightController.standby(false);
   }
 
   //auto
@@ -91,6 +93,7 @@ public class Robot extends TimedRobot {
     mClimb.start();
     mIntake.start(false);
     mShooter.start();
+    mLimelightController.start();
     //pneumatics_thread.start();
   }
 
@@ -108,6 +111,7 @@ public class Robot extends TimedRobot {
     mIntake.stop();
     mShooter.stop();
     mAutonomousController.stop();
+    mLimelightController.stop();
     //pneumatics.exitFlag = true;
   }
 
