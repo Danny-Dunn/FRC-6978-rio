@@ -87,7 +87,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     long angleTS;
     long autoTS;
 
-    void setDriveMode(AutoMode dm) {
+    void setAutoMode(AutoMode dm) {
         mAutoMode = dm;
         autoConditionSatisfied = false;
         autoTS = System.nanoTime();

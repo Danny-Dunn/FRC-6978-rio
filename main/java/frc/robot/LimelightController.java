@@ -96,19 +96,19 @@ public class LimelightController implements ServiceableModule, Runnable {
                 mRealTimeDrive.targetAngle = tx.getDouble(0);
                 mRealTimeDrive.targetAngle = mRealTimeDrive.absyaw + tx.getDouble(0);
                 if(mRealTimeDrive.mAutoMode == AutoMode.user) {
-                    mRealTimeDrive.setDriveMode(AutoMode.rotate);
+                    mRealTimeDrive.setAutoMode(AutoMode.rotate);
                 }
                 rotateFlag = true;
             }
 
             if(mDriverInputManager.getWestButtonReleased()) {
-                mRealTimeDrive.setDriveMode(AutoMode.user);
+                mRealTimeDrive.setAutoMode(AutoMode.user);
                 rotateFlag = false;
             }
 
             if(rotateFlag) {
                 if(mRealTimeDrive.autoConditionSatisfied) {
-                    mRealTimeDrive.setDriveMode(AutoMode.user);
+                    mRealTimeDrive.setAutoMode(AutoMode.user);
                     rotateFlag = false;
                 }
             }

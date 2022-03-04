@@ -114,7 +114,7 @@ public class Shooter implements Runnable, ServiceableModule {
 
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
-        SmartDashboard.putNumber("Shooter Current", shooterMotor.getStatorCurrent());
+        SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
         SmartDashboard.putNumber("shooterOut", shooterOut);
 
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
