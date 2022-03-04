@@ -338,11 +338,11 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             }
 
             delta = 0.0;
-            double maxTurn = 0.3;
+            double maxTurn = 0.4;
             double deltaT;
 
             double deadZone = 0.2;
-            double fullSpeed = 0.65;
+            double fullSpeed = 0.75;
 
             double x = 0.0;
             double y = 0.0;
@@ -351,10 +351,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 case rotate:
                     delta = targetAngle - (realyaw - targetAngleOffset);
 
-                    deltaT = (System.nanoTime() - angleTS) / 1000000;
+                    eIntegral += ((System.nanoTime() - angleTS) * delta) / 10000000000d;
                     angleTS = System.nanoTime();
-
-                    eIntegral += delta * deltaT;
                     SmartDashboard.putNumber("eIntegral", eIntegral);
 
                     x = (delta * angleP) + (eIntegral * angleI);
@@ -364,7 +362,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     //
                     y = 0;
 
-                    autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
+                    autoConditionSatisfied = (Math.abs(delta) < 1.5) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
                     break;
 
                 case distance:
