@@ -42,7 +42,7 @@ public class Robot extends TimedRobot {
     mClimb = new Climb(mOperatorInputManager);
     mShooter = new Shooter(mDriverInputManager);
     mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake, mShooter);
-    mLimelightController = new LimelightController(mRealTimeDrive);
+    mLimelightController = new LimelightController(mRealTimeDrive, mDriverInputManager);
 
     
     mRealTimeDrive.init();

@@ -5,7 +5,6 @@ import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RealTimeDrive.AutoMode;
-import frc.robot.RealTimeDrive.DriveControlMode;
 
 public class LimelightController implements ServiceableModule, Runnable {
     private Thread mThread;
@@ -21,8 +20,9 @@ public class LimelightController implements ServiceableModule, Runnable {
 
     double targetHeight = 176.5; //height off ground
 
-    public LimelightController(RealTimeDrive rtdrive) {
-        mRealTimeDrive = rtdrive;
+    public LimelightController(RealTimeDrive realTimeDrive, InputManager driverInputManager) {
+        mRealTimeDrive = realTimeDrive;
+        mDriverInputManager = driverInputManager;
     }
 
     public boolean init() {
