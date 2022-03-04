@@ -10,10 +10,15 @@ public class Shooter implements Runnable, ServiceableModule {
     private InputManager mDriverInputManager;
 
     private TalonSRX shooterMotor; 
+    private TalonSRX loaderMotor;
 
     private double shooterPower;
+    private double shooterOut;
 
-    private enum ShooterControlMode {
+    private boolean auto;
+    private boolean autoConditionSatisfied;
+
+    public enum ShooterControlMode {
         velocity,
         direct,
         none
@@ -22,10 +27,13 @@ public class Shooter implements Runnable, ServiceableModule {
     private ShooterControlMode mShooterControlMode;
 
     public void setShooterControlMode(ShooterControlMode mode) {
+        System.out.println("[Shooter] set control mode to " + mode.toString());
         switch (mode) {
             case velocity:
-                integralError = 0;
-                integralTS = System.nanoTime();
+                if(mShooterControlMode == ShooterControlMode.velocity) {
+                    integralError = 0;
+                    integralTS = System.nanoTime();
+                }
                 break;
             default:
                 break;
@@ -33,12 +41,16 @@ public class Shooter implements Runnable, ServiceableModule {
         mShooterControlMode = mode;
     }
 
+    public boolean getAutoConditionSatisfied() {
+        return autoConditionSatisfied;
+    }
+
     private long integralTS;
     private double integralError;
     private double shooterPID(double target, double kP, double kI) {
         double error = target - shooterMotor.getSelectedSensorVelocity();
 
-        integralError += ((System.nanoTime() - integralTS) * error) / 1000000000;
+        integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
         integralTS = System.nanoTime();
 
         return (error * kP) + (integralError * kI);
@@ -51,9 +63,11 @@ public class Shooter implements Runnable, ServiceableModule {
 
     public boolean init() {
         shooterMotor = new TalonSRX(10);
+        loaderMotor = new TalonSRX(11);
         shooterMotor.setSelectedSensorPosition(0);
         shooterMotor.setSensorPhase(true);
         shooterMotor.setInverted(false);
+        loaderMotor.setInverted(true);
 
         mShooterControlMode = ShooterControlMode.none;
 
@@ -62,10 +76,17 @@ public class Shooter implements Runnable, ServiceableModule {
     }
 
     public boolean start() {
+        return start(false);
+    }
+
+    public boolean start(boolean auto) {
         boolean ret;
 
-        ret = mDriverInputManager.map();
-        if(!ret) return ret;
+        if(!auto) {
+            ret = mDriverInputManager.map();
+            if(!ret) return ret;
+        }
+        this.auto = auto;
 
         exitFlag = false;
 
@@ -94,8 +115,11 @@ public class Shooter implements Runnable, ServiceableModule {
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
         SmartDashboard.putNumber("Shooter Current", shooterMotor.getStatorCurrent());
+        SmartDashboard.putNumber("shooterOut", shooterOut);
 
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
+
+        SmartDashboard.putBoolean("intakeLoaderEnabled", autoConditionSatisfied);
 
         if(takeConfigOptions) {
             shooterPower = SmartDashboard.getNumber("Shooter Power", 0.6);
@@ -107,20 +131,37 @@ public class Shooter implements Runnable, ServiceableModule {
         
         System.out.println("[Shooter] entered independent service");
         while(!exitFlag) {
-            if(mDriverInputManager.getSouthButtonPressed()) {
-                setShooterControlMode(ShooterControlMode.velocity);
-            } else if(mDriverInputManager.getSouthButtonReleased()) {
-                setShooterControlMode(ShooterControlMode.none);
+            if(!auto) {
+                if(mDriverInputManager.getSouthButtonPressed()) {
+                    setShooterControlMode(ShooterControlMode.velocity);
+                } else if(mDriverInputManager.getSouthButtonReleased()) {
+                    setShooterControlMode(ShooterControlMode.none);
+                }
             }
 
             switch (mShooterControlMode) {
                 case velocity:
-                    shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000111, 0.0000317));
+                    shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000511, 0.00000068));
+                    shooterOut = -shooterPID(19000, 0.000511, 0.00000068);
+                    if(19000 - shooterMotor.getSelectedSensorVelocity() < 500 || mDriverInputManager.getWestButton()) {
+                        loaderMotor.set(ControlMode.PercentOutput, 0.2);
+                        autoConditionSatisfied = true;
+                    } else {
+                        loaderMotor.set(ControlMode.PercentOutput, 0);
+                        autoConditionSatisfied = false;
+                    }
                     break;
                 case direct:
                     shooterMotor.set(ControlMode.PercentOutput, shooterPower);
+                    if(mDriverInputManager.getWestButton()) {
+                        loaderMotor.set(ControlMode.PercentOutput, 0.2);
+                    } else {
+                        loaderMotor.set(ControlMode.PercentOutput, 0);
+                    }
                 default:
                     shooterMotor.set(ControlMode.PercentOutput, 0.0);
+                    loaderMotor.set(ControlMode.PercentOutput, 0);
+                    autoConditionSatisfied = false;
                     break;
             }
 
