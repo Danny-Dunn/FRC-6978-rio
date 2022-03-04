@@ -31,11 +31,11 @@ public class Intake implements Runnable, ServiceableModule{
 
     NetworkTable simTable;
 
-    double intakeFullOutPosition = 750;
-    double intakeParkPosition = -25;
+    double intakeFullOutPosition = 813;
+    double intakeParkPosition = -82;
     double intakeTicksPerRadian = 651.8986469;
-    double intakeUpperPosition = -15;
-    double intakeHorizontalBias = 0.14;
+    double intakeUpperPosition = -82;
+    double intakeHorizontalBias = 0.13;
 
     private boolean autoConditionSatisfied;
 
@@ -62,6 +62,7 @@ public class Intake implements Runnable, ServiceableModule{
 
     public Intake(InputManager inputManager) {
         mOperatorInputManager = inputManager;
+        mIntakeMode = IntakeMode.none;
     }
 
     public void simOut(String tag, Double value) {
@@ -75,8 +76,13 @@ public class Intake implements Runnable, ServiceableModule{
     public boolean init() {
         intakeLiftMotor = new TalonSRX(30);
         intakeRollerMotor = new TalonSRX(31);
+        intakeRollerMotor.setInverted(true);
         intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
+        intakeLiftMotor.setSensorPhase(true);
+        intakeLiftMotor.setInverted(true);
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
+
+        intakeTargetPosition = intakeParkPosition;
 
         System.out.println("[Intake] finished initialisation");
         return true;
@@ -124,9 +130,11 @@ public class Intake implements Runnable, ServiceableModule{
     }
 
     public void standby(boolean takeConfigOptions) {
-        SmartDashboard.putNumber("Intake Lift Radians", intakeLiftMotor.getSelectedSensorPosition() / intakeTicksPerRadian);
-        SmartDashboard.putNumber("Intake Lift Power", intakeLiftMotor.getStatorCurrent() * intakeLiftMotor.getBusVoltage()); //calculate the total power draw in watts
-        simOut("Intake Target Position", intakeTargetPosition);
+        SmartDashboard.putNumber("intakeRadians", intakeLiftMotor.getSelectedSensorPosition() / intakeTicksPerRadian);
+        SmartDashboard.putNumber("intakePower", intakeLiftMotor.getStatorCurrent() * intakeLiftMotor.getBusVoltage()); //calculate the total power draw in watts
+        SmartDashboard.putNumber("intakeTargetRadians", intakeTargetPosition / intakeTicksPerRadian);
+        SmartDashboard.putNumber("intakeTicks", intakeLiftMotor.getSelectedSensorPosition());
+        SmartDashboard.putString("intakeMode", mIntakeMode.toString());
     }
 
     long integralTS;
@@ -138,7 +146,7 @@ public class Intake implements Runnable, ServiceableModule{
         double weightBias = Math.sin(intakeLiftMotor.getSelectedSensorPosition() / intakeTicksPerRadian) * intakeHorizontalBias;
 
         double movePower = (error * kP);
-        movePower = (movePower > 0.10)? 0.10 : movePower;
+        movePower = (movePower > 0.28)? 0.28 : movePower;
         movePower = (movePower < -0.065)? -0.065 : movePower;
         SmartDashboard.putNumber("Move Power", movePower);
         SmartDashboard.putNumber("Intake Error", error);
@@ -149,13 +157,14 @@ public class Intake implements Runnable, ServiceableModule{
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
         exitFlag = false;
-        intakeTargetPosition = 0;
+        intakeTargetPosition = intakeParkPosition;
         double deadZone = 0.1;
         double intakeFineAdjustSpeed = 0.5;
         long lastCalcTS = System.nanoTime();
         boolean intakeFineAdjustEnabled = true;
-        boolean rollerFineAdjustEnabled = true;
-        double rollerOutSpeed = -0.2;
+        boolean rollerFineAdjustEnabled = false;
+        double rollerOutSpeed = -0.5;
+        double rollerInSpeed = 0.6;
         System.out.println("[Intake] entered independent service");
         while(!exitFlag) {
             double rollerOut = 0.0;
@@ -195,7 +204,7 @@ public class Intake implements Runnable, ServiceableModule{
                         simOut("Intake Roller Out", y);
                         rollerOut = y;
                     } else if(mOperatorInputManager.getSouthButton()) {
-                        rollerOut = rollerOutSpeed;
+                        rollerOut = rollerInSpeed;
                     } else if(mOperatorInputManager.getNorthButton()) {
                         rollerOut = rollerOutSpeed;
                     }
@@ -218,11 +227,10 @@ public class Intake implements Runnable, ServiceableModule{
                     break;
             }
 
-            simOut("Intake Power Out", -intakeLiftPID(intakeTargetPosition, 0.0016));
-
-            double liftOut = -intakeLiftPID(intakeTargetPosition, -0.0016);
+            double liftOut = -intakeLiftPID(intakeTargetPosition, -0.0018);
+            simOut("Intake Power Out", liftOut);
             liftOut = (liftOut > 0.19)? 0.19 : liftOut;
-            liftOut = (liftOut < -0.18)? -0.18 : liftOut;
+            liftOut = (liftOut < -0.29)? -0.29 : liftOut;
 
             intakeLiftMotor.set(ControlMode.PercentOutput, liftOut);
 
