@@ -179,6 +179,13 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         return true;
     }
 
+    void setDriveMotors(double left, double right) {
+        DL1Motor.set(ControlMode.PercentOutput, left);
+        DL2Motor.set(ControlMode.PercentOutput, left);
+        DR1Motor.set(ControlMode.PercentOutput, -right);
+        DR2Motor.set(ControlMode.PercentOutput, -right);
+    }
+
     public RealTimeDrive(InputManager inputManager, AHRS navX) {
         //meta stuff
         this.mDriverInputManager = inputManager;
@@ -254,6 +261,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
     public boolean stop() {
         if(mThread == null) return true;
+
+        setDriveMotors(0, 0);
+        SmartDashboard.putBoolean("RTDrive OK", false);
+
         exitFlag = true;
         try {Thread.sleep(20);} catch (Exception e) {}
 
@@ -315,19 +326,13 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     void forcefulDisconnect(String reason) {
         System.out.println("[RTDrive] CRITICAL!! " + reason);
         System.out.println("[RTDrive] disconnected");
-        DL1Motor.set(ControlMode.PercentOutput, 0);
-        DL2Motor.set(ControlMode.PercentOutput, 0);
-        DR1Motor.set(ControlMode.PercentOutput, 0);
-        DR2Motor.set(ControlMode.PercentOutput, 0);
-        SmartDashboard.putBoolean("RTDrive OK", false);
-        exitFlag = true;
+        stop();
         return;
     }
 
     public boolean exitFlag;
     public void run() { //might remove
         System.out.println("[RTDrive] entered independent service");
-        SmartDashboard.putBoolean("RTDrive OK", true);
         
         firstCycle = true;
 
@@ -452,18 +457,13 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     forcefulDisconnect("drive state not zeroed on startup");
                     return;
                 }
+                SmartDashboard.putBoolean("RTDrive OK", true);
                 firstCycle = false;
             }
 
-            DL1Motor.set(ControlMode.PercentOutput, leftDrive);
-            DL2Motor.set(ControlMode.PercentOutput, leftDrive);
-            DR1Motor.set(ControlMode.PercentOutput, -rightDrive);
-            DR2Motor.set(ControlMode.PercentOutput, -rightDrive);
-            
-            
+            setDriveMotors(leftDrive, rightDrive);
             
             long elapsedTime = System.nanoTime() - start;
-            simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 2000000) {
                 //System.out.println("[RTDrive] Motion processing took longer than 2ms! Took " + elapsedTime + "uS");
             }
@@ -472,4 +472,3 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         System.out.println("[RTDrive] left independent service");
     }
 }
-
