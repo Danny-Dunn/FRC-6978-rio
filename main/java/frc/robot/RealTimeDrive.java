@@ -2,7 +2,7 @@ package frc.robot;
 //Cross The Road Electronics(CTRE) libs must be installed
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-
+import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 
 import com.kauailabs.navx.frc.AHRS;
@@ -58,6 +58,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         distance,
         curve,
         stop,
+        user,
         none
     };
 
@@ -182,10 +183,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.0158);
+        SmartDashboard.putNumber("angleP", 0.0578);
         SmartDashboard.putNumber("angleP2", 0.0104);
-        SmartDashboard.putNumber("angleI", 0.000007);
-        SmartDashboard.putNumber("distanceP", 0.016);
+        SmartDashboard.putNumber("angleI", 0.004);
+        SmartDashboard.putNumber("distanceP", 0.046);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
     //output functions for simulation
@@ -222,7 +223,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         if(!calibrateTracking(true)) return false;
         System.out.println("[RTDrive] Calibrated tracking with angle offset " + angleOffset);
         
-        mAutoMode = AutoMode.stop;
+        mAutoMode = AutoMode.none;
 
         mDriverInputManager.map();
 
@@ -246,7 +247,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         mThread = new Thread(this, "RTDrive");
         mThread.start();
 
-        mAutoMode = AutoMode.none;
+        mAutoMode = AutoMode.user;
 
         return true;
     }
@@ -265,6 +266,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         }
 
         mThread = null;
+
+        mAutoMode = AutoMode.none;
 
         return true;
     }
@@ -299,7 +302,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("absYaw", absyaw);
 
         if(mAutoMode != null)
-        SmartDashboard.putString("autoMode", mAutoMode.toString());
+        SmartDashboard.putString("autoGuidanceMode", mAutoMode.toString());
 
         if(takeConfigOptions) {
             angleP = SmartDashboard.getNumber("angleP", 0.0015);
@@ -399,7 +402,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     y = 0;
                     break;
 
-                case none: //USER control
+                case user: //USER control
                     double Lt = mDriverInputManager.getLeftTrigger();
                     double Rt = mDriverInputManager.getRightTrigger();
                     
@@ -426,6 +429,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     //if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                     //y = y / (1 - deadZone);
                     simOut("yval", y);
+                    break;
+                default:
                     break;
             }
 
@@ -460,7 +465,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             long elapsedTime = System.nanoTime() - start;
             simOut("RTDrive last time", (double)elapsedTime);
             if(elapsedTime > 2000000) {
-                System.out.println("[RTDrive] Motion processing took longer than 2ms! Took " + elapsedTime + "uS");
+                //System.out.println("[RTDrive] Motion processing took longer than 2ms! Took " + elapsedTime + "uS");
             }
         }
         SmartDashboard.putBoolean("RTDrive OK", false);
