@@ -61,18 +61,39 @@ public class AutonomousController implements Runnable, ServiceableModule {
         new Vector2d(0, 0),
     };
 
-    AutoCommand commands[] = {
-        new AutoCommand(CommandType.SetIntake, 750, 0.75),
+    /*AutoCommand commands[] = {
+        new AutoCommand(CommandType.SetIntake, 950, 0.5),
         new AutoCommand(CommandType.Delay, 1000, 0),
-        new AutoCommand(122, 0),
-        new AutoCommand(CommandType.SetIntake, 650, 0.75),
-        new AutoCommand(CommandType.SetIntake, 0, 0),
-        new AutoCommand(CommandType.SetShooter, 1, 0), 
+        new AutoCommand(152, 0),
+        new AutoCommand(CommandType.SetIntake, 950, 0.5),
+        new AutoCommand(CommandType.SetIntake, -82, 0),
+        new AutoCommand(CommandType.Delay, 500, 0),
         new AutoCommand(CommandType.RotateToAngle, 180, 0),
+        new AutoCommand(CommandType.SetShooter, 1, 0), 
+        new AutoCommand(0, 0),
         new AutoCommand(CommandType.SetShooter, 1, 1), 
-        new AutoCommand(CommandType.Delay, 2000, 0), //wait while it fires
+        new AutoCommand(CommandType.Delay, 3000, 0), //wait while it fires
         new AutoCommand(CommandType.SetShooter, 0, 0),
-        new AutoCommand(430, 146), //go near driver station
+        new AutoCommand(330,-100), //go near driver station
+    };*/
+
+    /*AutoCommand commands[] = {
+        new AutoCommand(CommandType.SetShooter, 1, 1), 
+        new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
+        new AutoCommand(CommandType.SetShooter, 0, 0),
+        new AutoCommand(CommandType.DriveDistance, -200, 0),
+    }*/
+
+    AutoCommand commands[] = {
+        new AutoCommand(CommandType.SetShooter, 1, 1), 
+        new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
+        new AutoCommand(CommandType.SetShooter, 0, 0),
+        new AutoCommand(CommandType.RotateToAngle, 180, 0),
+        new AutoCommand(CommandType.SetIntake, 950, 0.5),
+        new AutoCommand(CommandType.Delay, 750, 0),
+        new AutoCommand(CommandType.DriveDistance, 150, 0),
+        new AutoCommand(CommandType.Delay, 300, 0),
+        new AutoCommand(CommandType.SetIntake, -82, 0),
     };
 
     /*AutoCommand commands[] = {
@@ -184,6 +205,9 @@ public class AutonomousController implements Runnable, ServiceableModule {
                         case RotateToAngle:
                             autoState = 2;
                             break;
+                        case DriveDistance:
+                            autoState = 4;
+                            break;
                         case Delay:
                             delayTS = System.nanoTime();
                             currentDelay = (long)commands[pointNum].aparam * 1000000l;
@@ -212,13 +236,13 @@ public class AutonomousController implements Runnable, ServiceableModule {
                             dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
                             dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
                             mRealTimeDrive.targetAngle = Math.toDegrees(Math.atan2(dy, dx));
-                            mRealTimeDrive.setDriveMode(AutoMode.rotate);
+                            mRealTimeDrive.setAutoMode(AutoMode.rotate);
                             autoState++;
                             break;
                         case RotateToAngle:
                             System.out.println("[AlignDC] rot to angle");
                             mRealTimeDrive.targetAngle = commands[pointNum].aparam; 
-                            mRealTimeDrive.setDriveMode(AutoMode.rotate);
+                            mRealTimeDrive.setAutoMode(AutoMode.rotate);
                             autoState++;
                             break;
                         default:
@@ -244,23 +268,46 @@ public class AutonomousController implements Runnable, ServiceableModule {
                     }
                     break;
                 case 4:
-                    dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
-                    dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
-                    mRealTimeDrive.targetDistance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0));
-                    mRealTimeDrive.setDriveMode(AutoMode.distance);
-                    autoState++;
+                    switch(commands[pointNum].type) {
+                        case DriveToPoint:
+                            dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                            dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
+                            mRealTimeDrive.targetDistance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0));
+                            mRealTimeDrive.setAutoMode(AutoMode.distance);
+                            autoState++;
+                            break;
+                        case DriveDistance:
+                            mRealTimeDrive.targetDistance = commands[pointNum].aparam;
+                            mRealTimeDrive.setAutoMode(AutoMode.distance);
+                            autoState++;
+                            break;
+                        default:
+                            autoState = 0;
+                            break;
+                    }
                     break;
                 case 5:
                     if(mRealTimeDrive.autoConditionSatisfied) {
-                        dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
-                        dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
-                        if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 15.0) {
-                            pointNum++;
-                            autoState = 0;
-                        } else {
-                            autoState = 2;
+                        switch(commands[pointNum].type) {
+                            case DriveToPoint:
+                                dy = commands[pointNum].point.y - mRealTimeDrive.currentPosition.y;
+                                dx = commands[pointNum].point.x - mRealTimeDrive.currentPosition.x;
+                                if(Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0)) < 15.0) {
+                                    pointNum++;
+                                    autoState = 0;
+                                } else {
+                                    autoState = 2;
+                                }
+                                break;
+                            case DriveDistance:
+                                pointNum++;
+                                autoState = 0;
+                                break;
+                            default:
+                                autoState = 0;
+                                break;
                         }
-                        mRealTimeDrive.setDriveMode(AutoMode.stop);
+                        mRealTimeDrive.setAutoMode(AutoMode.stop);
                     }
                     break;
                 case 6: //await shooter
