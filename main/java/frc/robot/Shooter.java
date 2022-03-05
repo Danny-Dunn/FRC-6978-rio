@@ -8,6 +8,7 @@ public class Shooter implements Runnable, ServiceableModule {
     private Thread mThread;
     
     private InputManager mDriverInputManager;
+    private InputManager mOperatorInputManager;
 
     private TalonSRX shooterMotor; 
     private TalonSRX loaderMotor;
@@ -30,7 +31,7 @@ public class Shooter implements Runnable, ServiceableModule {
         System.out.println("[Shooter] set control mode to " + mode.toString());
         switch (mode) {
             case velocity:
-                if(mShooterControlMode == ShooterControlMode.velocity) {
+                if(mShooterControlMode != ShooterControlMode.velocity) {
                     integralError = 0;
                     integralTS = System.nanoTime();
                 }
@@ -56,8 +57,9 @@ public class Shooter implements Runnable, ServiceableModule {
         return (error * kP) + (integralError * kI);
     }
 
-    public Shooter(InputManager inputManager) {
+    public Shooter(InputManager inputManager, InputManager operatorInputManager) {
         mDriverInputManager = inputManager;
+        mOperatorInputManager = operatorInputManager;
         SmartDashboard.putNumber("Shooter Power", 0.6);
     }
 
@@ -84,6 +86,8 @@ public class Shooter implements Runnable, ServiceableModule {
 
         if(!auto) {
             ret = mDriverInputManager.map();
+            if(!ret) return ret;
+            ret = mOperatorInputManager.map();
             if(!ret) return ret;
         }
         this.auto = auto;
@@ -132,19 +136,19 @@ public class Shooter implements Runnable, ServiceableModule {
         System.out.println("[Shooter] entered independent service");
         while(!exitFlag) {
             if(!auto) {
-                if(mDriverInputManager.getSouthButtonPressed()) {
+                if(mOperatorInputManager.getWestButtonPressed()) {
                     setShooterControlMode(ShooterControlMode.velocity);
-                } else if(mDriverInputManager.getSouthButtonReleased()) {
+                } else if(mOperatorInputManager.getWestButtonReleased()) {
                     setShooterControlMode(ShooterControlMode.none);
                 }
             }
 
             switch (mShooterControlMode) {
                 case velocity:
-                    shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000511, 0.00000068));
-                    shooterOut = -shooterPID(19000, 0.000511, 0.00000068);
-                    if(19000 - shooterMotor.getSelectedSensorVelocity() < 500 || mDriverInputManager.getWestButton()) {
-                        loaderMotor.set(ControlMode.PercentOutput, 0.2);
+                    shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000911, 0.00000082));
+                    shooterOut = -shooterPID(18000, 0.001111, 0.00000315);
+                    if(18000 - shooterMotor.getSelectedSensorVelocity() < 700 || mDriverInputManager.getWestButton()) {
+                        loaderMotor.set(ControlMode.PercentOutput, 0.35);
                         autoConditionSatisfied = true;
                     } else {
                         loaderMotor.set(ControlMode.PercentOutput, 0);
@@ -154,7 +158,7 @@ public class Shooter implements Runnable, ServiceableModule {
                 case direct:
                     shooterMotor.set(ControlMode.PercentOutput, shooterPower);
                     if(mDriverInputManager.getWestButton()) {
-                        loaderMotor.set(ControlMode.PercentOutput, 0.2);
+                        loaderMotor.set(ControlMode.PercentOutput, 0.08);
                     } else {
                         loaderMotor.set(ControlMode.PercentOutput, 0);
                     }
@@ -163,6 +167,15 @@ public class Shooter implements Runnable, ServiceableModule {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
                     autoConditionSatisfied = false;
                     break;
+            }
+
+            if(!auto) {
+                if(mOperatorInputManager.getRightSystemButton() || mOperatorInputManager.getSouthButton()) {
+                    loaderMotor.set(ControlMode.PercentOutput, 0.08);
+                }
+                if(mOperatorInputManager.getLeftSystemButton()) {
+                    loaderMotor.set(ControlMode.PercentOutput, -0.08);
+                }
             }
 
             try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
