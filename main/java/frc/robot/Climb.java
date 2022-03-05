@@ -145,13 +145,13 @@ public class Climb implements Runnable, ServiceableModule {
                 CBRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            if(mOperatorInputManager.getWestButton()) {
+            /*if(mOperatorInputManager.getWestButton()) {
                 HookCarriageMotor.set(ControlMode.PercentOutput, 0.15);
             } else if(mOperatorInputManager.getEastButton()) {
                 HookCarriageMotor.set(ControlMode.PercentOutput, -0.15);
             } else {
                 HookCarriageMotor.set(ControlMode.PercentOutput, 0);
-            }
+            }*/ //FIXME: CLIMB SLIDE DISABLED
             
             if(autoEnabled) {
                 climbPID(100, CBLMotor);
