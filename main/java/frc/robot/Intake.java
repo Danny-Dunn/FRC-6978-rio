@@ -9,60 +9,79 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Intake implements Runnable, ServiceableModule{
     private Thread mThread;
+    private boolean auto;
 
     InputManager mOperatorInputManager;
 
     TalonSRX intakeLiftMotor; //retracts ball pickup structure into robot
     TalonSRX intakeRollerMotor; //drives rollers to pick up cargo
 
-    enum IntakeMode {
-        user,
+    public static class IntakeConfig {
+        public static double deadZone = 0.1;
+        public static double intakeFineAdjustSpeed = 0.5;
+        public static boolean intakeFineAdjustEnabled = true;
+        public static boolean rollerFineAdjustEnabled = false;
+        public static double rollerOutSpeed = -0.35;
+        public static double rollerInSpeed = 0.35;
+        public static RollerMode defaultRollerMode = RollerMode.direct;
+        public static LiftMode defaultLiftMode = LiftMode.position;
+    }
+
+    enum RollerMode {
+        direct,
         none,
-        position,
-        rollers,
-        all
     };
 
-    IntakeMode mIntakeMode;
+    enum LiftMode {
+        position,
+        direct,
+        none,
+    };
+
+    RollerMode mRollerMode;
+    LiftMode mLiftMode;
+
+    private boolean liftConditionSatisfied;
+    private boolean rollerConditionSatisfied;
 
     boolean targetState = true; //determined by joystick buttons
     double intakeTargetPosition;
     double rollerPower;
+    double liftOut;
 
     NetworkTable simTable;
 
-    double intakeFullOutPosition = 813;
+    double intakeFullOutPosition = 950;
     double intakeParkPosition = -82;
     double intakeTicksPerRadian = 651.8986469;
     double intakeUpperPosition = -82;
-    double intakeHorizontalBias = 0.13;
+    double intakeHorizontalBias = 0.10;
 
-    private boolean autoConditionSatisfied;
+   
 
-    public boolean getAutoConditionSatisfied() {
-        return autoConditionSatisfied;
+    public boolean getRollerConditionSatisfied() {
+        return rollerConditionSatisfied;
+    }
+    
+    public boolean getLiftConditionSatisfied() {
+        return liftConditionSatisfied;
     }
 
     public void setLift(double setpoint) {
-        autoConditionSatisfied = false;
+        liftConditionSatisfied = false;
         intakeTargetPosition = setpoint;
-        mIntakeMode = (mIntakeMode == IntakeMode.rollers)? IntakeMode.all : IntakeMode.position;
     }
 
-    public void setRollers(double power) {
-        autoConditionSatisfied = false;
+    public void setRollers(RollerMode mode, double power) {
+        rollerConditionSatisfied = false;
+        mRollerMode = mode;
         rollerPower = power;
-        mIntakeMode = (mIntakeMode == IntakeMode.position)? IntakeMode.all : IntakeMode.rollers;
-    }
-
-    public void setUser() {
-        mIntakeMode = IntakeMode.user;
-        autoConditionSatisfied = false;
     }
 
     public Intake(InputManager inputManager) {
         mOperatorInputManager = inputManager;
-        mIntakeMode = IntakeMode.none;
+        mRollerMode = RollerMode.none;
+        mLiftMode = LiftMode.none;
     }
 
     public void simOut(String tag, Double value) {
@@ -76,7 +95,7 @@ public class Intake implements Runnable, ServiceableModule{
     public boolean init() {
         intakeLiftMotor = new TalonSRX(30);
         intakeRollerMotor = new TalonSRX(31);
-        intakeRollerMotor.setInverted(true);
+        intakeRollerMotor.setInverted(false);
         intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
         intakeLiftMotor.setSensorPhase(true);
         intakeLiftMotor.setInverted(true);
@@ -101,11 +120,19 @@ public class Intake implements Runnable, ServiceableModule{
         }
 
         exitFlag = false;
-        if(auto) {
-            mIntakeMode = IntakeMode.none;
-        } else {
-            mIntakeMode = IntakeMode.user;
-        }
+        
+        this.auto = auto;
+
+        System.out.println("[Intake] Pulling mechanism for calibration");
+        intakeLiftMotor.set(ControlMode.PercentOutput, -0.15);
+        try {Thread.sleep(700);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+        intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
+        System.out.println("[Intake] Finished encoder calibration");
+
+        targetState = false;
+
+        mLiftMode = IntakeConfig.defaultLiftMode;
+        mRollerMode = IntakeConfig.defaultRollerMode;
 
         mThread = new Thread(this, "Intake");
         mThread.start();
@@ -134,16 +161,20 @@ public class Intake implements Runnable, ServiceableModule{
         SmartDashboard.putNumber("intakePower", intakeLiftMotor.getStatorCurrent() * intakeLiftMotor.getBusVoltage()); //calculate the total power draw in watts
         SmartDashboard.putNumber("intakeTargetRadians", intakeTargetPosition / intakeTicksPerRadian);
         SmartDashboard.putNumber("intakeTicks", intakeLiftMotor.getSelectedSensorPosition());
-        SmartDashboard.putString("intakeMode", mIntakeMode.toString());
+        SmartDashboard.putString("rollerMode", mRollerMode.toString());
+        SmartDashboard.putString("lfitMode", mLiftMode.toString());
+        SmartDashboard.putNumber("intakeOut", liftOut);
     }
 
     long integralTS;
     double integralError;
 
-    double intakeLiftPID(double target, double kP) {
+    double intakeLiftPID(double target, double kP, double kI) {
         double error = target - intakeLiftMotor.getSelectedSensorPosition();
 
         double weightBias = Math.sin(intakeLiftMotor.getSelectedSensorPosition() / intakeTicksPerRadian) * intakeHorizontalBias;
+
+        integralError += (error * (System.currentTimeMillis() - integralTS)) / 10000000000d;
 
         double movePower = (error * kP);
         movePower = (movePower > 0.28)? 0.28 : movePower;
@@ -151,63 +182,44 @@ public class Intake implements Runnable, ServiceableModule{
         SmartDashboard.putNumber("Move Power", movePower);
         SmartDashboard.putNumber("Intake Error", error);
 
-        return weightBias + movePower;
+        return weightBias + movePower /*+ (integralError * kI)*/;
     }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
         exitFlag = false;
         intakeTargetPosition = intakeParkPosition;
-        double deadZone = 0.1;
-        double intakeFineAdjustSpeed = 0.5;
         long lastCalcTS = System.nanoTime();
-        boolean intakeFineAdjustEnabled = true;
-        boolean rollerFineAdjustEnabled = false;
-        double rollerOutSpeed = -0.5;
-        double rollerInSpeed = 0.6;
         System.out.println("[Intake] entered independent service");
         while(!exitFlag) {
             double rollerOut = 0.0;
-            switch(mIntakeMode) {
+            
+            if(!auto) {
+                
+                
+                if(mOperatorInputManager.getSouthButtonPressed()) {
+                    setRollers(RollerMode.direct, IntakeConfig.rollerInSpeed);
+                } else if(mOperatorInputManager.getNorthButtonPressed()) {
+                    setRollers(RollerMode.direct, IntakeConfig.rollerOutSpeed);
+                }
+            }
+            
+            switch (mRollerMode) {
+                case direct:
+                    rollerConditionSatisfied = true;
+                    rollerOut = rollerPower;
+                    break;
+                default:
+                    rollerOut = 0;
+                    break;
+            }
+
+            /*switch(mIntakeMode) {
                 case user:
-                    double deltaT = (System.nanoTime() - lastCalcTS) / 1000000.0d;
-                    lastCalcTS = System.nanoTime();
-
-                    if(intakeFineAdjustEnabled) {
-                        double y = -mOperatorInputManager.getLeftStickY();
-                        y = (y < deadZone && y > -deadZone)? 0 : y;
-                        if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
-                        y = y / (1 - deadZone); 
-
-                        intakeTargetPosition += y * deltaT * intakeFineAdjustSpeed;
-                    }
-
-                    intakeTargetPosition = (intakeTargetPosition > intakeFullOutPosition)? intakeFullOutPosition : intakeTargetPosition;
-                    intakeTargetPosition = (intakeTargetPosition < intakeParkPosition)? intakeParkPosition : intakeTargetPosition;            
-
-                    if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
-                        intakeTargetPosition = intakeFullOutPosition;
-                    } else if(mOperatorInputManager.getPOV() == 180) {
-                        intakeTargetPosition = intakeParkPosition;
-                    }
-                    
                     
 
-                    if(rollerFineAdjustEnabled) {
-                        double y = mOperatorInputManager.getRightStickY();
-                        y = (y < deadZone && y > -deadZone)? 0 : y;
-                        if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
-                        y = y / (1 - deadZone); 
 
-                        y = y*0.75;
-
-                        simOut("Intake Roller Out", y);
-                        rollerOut = y;
-                    } else if(mOperatorInputManager.getSouthButton()) {
-                        rollerOut = rollerInSpeed;
-                    } else if(mOperatorInputManager.getNorthButton()) {
-                        rollerOut = rollerOutSpeed;
-                    }
+                    
                     break;
                 case rollers:
                     autoConditionSatisfied = true;
@@ -225,18 +237,78 @@ public class Intake implements Runnable, ServiceableModule{
                 case none:
                     intakeTargetPosition = intakeParkPosition;
                     break;
+            }*/
+
+            switch (mLiftMode) {
+                case position:
+                    if(!auto) {
+                        double deltaT = (System.nanoTime() - lastCalcTS) / 1000000.0d;
+                        lastCalcTS = System.nanoTime();
+
+                        if(IntakeConfig.intakeFineAdjustEnabled) {
+                            double y = -mOperatorInputManager.getLeftStickY();
+                            y = (y < IntakeConfig.deadZone && y > -IntakeConfig.deadZone)? 0 : y;
+                            if(y != 0.0) y = (y > 0.0)? y - IntakeConfig.deadZone : y + IntakeConfig.deadZone; //eliminate jump behaviour
+                            y = y / (1 - IntakeConfig.deadZone); 
+
+                            intakeTargetPosition += y * deltaT * IntakeConfig.intakeFineAdjustSpeed;
+                        }
+                        
+                        if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
+                            setLift(intakeFullOutPosition);
+                        } else if(mOperatorInputManager.getPOV() == 180) {
+                            setLift(intakeParkPosition);
+                        }
+                    }
+
+                    intakeTargetPosition = (intakeTargetPosition > intakeFullOutPosition)? intakeFullOutPosition : intakeTargetPosition;
+                    intakeTargetPosition = (intakeTargetPosition < intakeParkPosition)? intakeParkPosition : intakeTargetPosition;            
+
+                    liftConditionSatisfied = Math.abs(intakeTargetPosition - intakeLiftMotor.getSelectedSensorPosition()) < 100;
+
+                    liftOut = -intakeLiftPID(intakeTargetPosition, -0.0022, 0);
+                    liftOut = (liftOut > 0.19)? 0.19 : liftOut;
+                    liftOut = (liftOut < -0.29)? -0.29 : liftOut;
+
+                    if(intakeTargetPosition == intakeParkPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeTargetPosition < 350) {
+                        liftOut = -0.10;
+                    } else if(intakeTargetPosition == intakeFullOutPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeParkPosition < 400) {
+                        liftOut = 0.25;
+                    } else if(intakeTargetPosition == intakeFullOutPosition)  {
+                        if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
+                            liftOut = 0.08;
+                        }
+                    }
+                    break;
+                case direct:
+                    if(!auto) {
+                        if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
+                            liftOut = 0.4;
+                            targetState = true;
+                        } else if(mOperatorInputManager.getPOV() == 180) {
+                            liftOut = -0.4;
+                            targetState = false;
+                        } else {
+                            if(targetState) {
+                                liftOut = 0.08;
+                            } else {
+                                liftOut = -0.1;
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    liftOut = 0;
+                    break;
             }
 
-            double liftOut = -intakeLiftPID(intakeTargetPosition, -0.0018);
-            simOut("Intake Power Out", liftOut);
-            liftOut = (liftOut > 0.19)? 0.19 : liftOut;
-            liftOut = (liftOut < -0.29)? -0.29 : liftOut;
+            
 
             intakeLiftMotor.set(ControlMode.PercentOutput, liftOut);
 
             intakeRollerMotor.set(ControlMode.PercentOutput, rollerOut);
 
-            try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+            try {Thread.sleep(10);} catch (InterruptedException ie) {} //deliberately only updates around 100hz
         }
         System.out.println("[Intake] left independent service");
     }

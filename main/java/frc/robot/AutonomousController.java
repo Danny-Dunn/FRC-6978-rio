@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RealTimeDrive.AutoMode;
 import frc.robot.Shooter.ShooterControlMode;
 import frc.robot.AutoCommand.CommandType;
+import frc.robot.Intake.RollerMode;
 
 
 
@@ -186,7 +187,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
                         case SetIntake:
                             //set intake
                             mIntake.setLift(commands[pointNum].aparam);
-                            mIntake.setRollers(commands[pointNum].bparam);
+                            mIntake.setRollers(RollerMode.direct, commands[pointNum].bparam);
                             pointNum++;
                             break;
                         case SetShooter:
