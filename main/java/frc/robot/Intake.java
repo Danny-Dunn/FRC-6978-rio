@@ -195,7 +195,9 @@ public class Intake implements Runnable, ServiceableModule{
             double rollerOut = 0.0;
             
             if(!auto) {
-                
+                if(mOperatorInputManager.getPOV() == 90) {
+                    mLiftMode = (mLiftMode == LiftMode.direct)? LiftMode.position : LiftMode.direct;
+                }
                 
                 if(mOperatorInputManager.getSouthButtonPressed()) {
                     setRollers(RollerMode.direct, IntakeConfig.rollerInSpeed);
