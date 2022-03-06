@@ -23,7 +23,7 @@ public class InputManager {
                 mControllerType = ControllerType.PS5;
                 break;
 
-            case "Logitech Dual Action": //TODO: logitech controller names
+            case "Logitech Dual Action":
                 mControllerType = ControllerType.logitechDigital;
                 break;
             case "Controller (Gamepad F310)":
