@@ -71,6 +71,8 @@ public class Robot extends TimedRobot {
     mIntake.start(true);
     mShooter.start(true);
 
+    mAutonomousController.standby(true);
+
     mAutonomousController.init();
     mAutonomousController.start();
   }
