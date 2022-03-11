@@ -19,9 +19,10 @@ public class Robot extends TimedRobot {
   Intake mIntake;
   PneumaticController pneumatics;
   Climb mClimb;
-  Shooter mShooter;
+
   LimelightController mLimelightController;
 
+  Shooter mShooter;
 
   AHRS navX;
 
@@ -48,6 +49,8 @@ public class Robot extends TimedRobot {
     mRealTimeDrive.init();
     mIntake.init();
     mLimelightController.init();
+
+    mShooter.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -60,16 +63,18 @@ public class Robot extends TimedRobot {
     mRealTimeDrive.standby(true);
     mIntake.standby(true);
     mLimelightController.standby(false);
+    mShooter.manager.checkStatus();
+    mShooter.manager.publishStatus();
+    mShooter.standby(true);
   }
 
   //auto
   @Override
   public void autonomousInit() {
-    mShooter.init();
     mRealTimeDrive.start();
 
     mIntake.start(true);
-    mShooter.start(true);
+    mShooter.manager.start();
 
     mAutonomousController.standby(true);
 
@@ -87,22 +92,18 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
     mClimb.init();
-    mShooter.init();
-
-    System.out.println("test?");
     
-    mRealTimeDrive.start();
-    mClimb.start();
-    mIntake.start(false);
-    mShooter.start();
-    mLimelightController.start();
+    //mRealTimeDrive.start();
+    //mClimb.start();
+    //mIntake.start(false);
+    mShooter.manager.start();
+    //mLimelightController.start();
     //pneumatics_thread.start();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    mShooter.standby(true);
   }
 
   /** This function is called once when the robot is disabled. */
@@ -111,7 +112,7 @@ public class Robot extends TimedRobot {
     mRealTimeDrive.stop();
     mClimb.stop();
     mIntake.stop();
-    mShooter.stop();
+    mShooter.manager.stop();
     mAutonomousController.stop();
     mLimelightController.stop();
     //pneumatics.exitFlag = true;

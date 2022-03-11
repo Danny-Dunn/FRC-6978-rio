@@ -4,8 +4,8 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class Shooter implements Runnable, ServiceableModule {
-    private Thread mThread;
+public class Shooter extends Subsystem {
+    private SubsystemManager mSubsystemManager;
     
     private InputManager mDriverInputManager;
     private InputManager mOperatorInputManager;
@@ -74,45 +74,21 @@ public class Shooter implements Runnable, ServiceableModule {
         mShooterControlMode = ShooterControlMode.none;
 
         System.out.println("[Shooter] finished initialisation");
+
+        //manager = subsystemManager;
         return true;
     }
 
-    public boolean start() {
-        return start(false);
-    }
-
-    public boolean start(boolean auto) {
+    public boolean setup() {
         boolean ret;
-
+        auto = false;
         if(!auto) {
-            ret = mDriverInputManager.map();
-            if(!ret) return ret;
             ret = mOperatorInputManager.map();
-            if(!ret) return ret;
-        }
-        this.auto = auto;
-
-        exitFlag = false;
-
-        mThread = new Thread(this, "Shooter");
-        mThread.start();
-
-        return true;
-    }
-
-    public boolean stop() {
-        if(mThread == null) return true;
-        exitFlag = true;
-        try {Thread.sleep(20);} catch (Exception e) {}
-
-        if(mThread.isAlive()) {
-            mThread.interrupt();
-            try {Thread.sleep(20);} catch (Exception e) {}
-            if(mThread.isAlive()) {
-                return false;
+            if(!ret) {
+                manager.setFailure("Controller mapping failed");
+                return ret;
             }
         }
-
         return true;
     }
 
@@ -130,56 +106,51 @@ public class Shooter implements Runnable, ServiceableModule {
         }
     }
     
-    public boolean exitFlag; //this flag is set true when the loop is to be exited
     public void run() {
         
-        System.out.println("[Shooter] entered independent service");
-        while(!exitFlag) {
-            if(!auto) {
-                if(mOperatorInputManager.getWestButtonPressed()) {
-                    setShooterControlMode(ShooterControlMode.velocity);
-                } else if(mOperatorInputManager.getWestButtonReleased()) {
-                    setShooterControlMode(ShooterControlMode.none);
-                }
+        if(!auto) {
+            if(mOperatorInputManager.getWestButtonPressed()) {
+                setShooterControlMode(ShooterControlMode.velocity);
+            } else if(mOperatorInputManager.getWestButtonReleased()) {
+                setShooterControlMode(ShooterControlMode.none);
             }
+        }
 
-            switch (mShooterControlMode) {
-                case velocity:
-                    shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000911, 0.00000082));
-                    shooterOut = -shooterPID(18000, 0.001111, 0.00000315);
-                    if(18000 - shooterMotor.getSelectedSensorVelocity() < 700 || mDriverInputManager.getWestButton()) {
-                        loaderMotor.set(ControlMode.PercentOutput, 0.35);
-                        autoConditionSatisfied = true;
-                    } else {
-                        loaderMotor.set(ControlMode.PercentOutput, 0);
-                        autoConditionSatisfied = false;
-                    }
-                    break;
-                case direct:
-                    shooterMotor.set(ControlMode.PercentOutput, shooterPower);
-                    if(mDriverInputManager.getWestButton()) {
-                        loaderMotor.set(ControlMode.PercentOutput, 0.08);
-                    } else {
-                        loaderMotor.set(ControlMode.PercentOutput, 0);
-                    }
-                default:
-                    shooterMotor.set(ControlMode.PercentOutput, 0.0);
+        switch (mShooterControlMode) {
+            case velocity:
+                shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000911, 0.00000082));
+                shooterOut = -shooterPID(18000, 0.001111, 0.00000315);
+                if(18000 - shooterMotor.getSelectedSensorVelocity() < 700 || mDriverInputManager.getWestButton()) {
+                    loaderMotor.set(ControlMode.PercentOutput, 0.35);
+                    autoConditionSatisfied = true;
+                } else {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
                     autoConditionSatisfied = false;
-                    break;
-            }
-
-            if(!auto) {
-                if(mOperatorInputManager.getRightSystemButton() || mOperatorInputManager.getSouthButton()) {
+                }
+                break;
+            case direct:
+                shooterMotor.set(ControlMode.PercentOutput, shooterPower);
+                if(mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.08);
+                } else {
+                    loaderMotor.set(ControlMode.PercentOutput, 0);
                 }
-                if(mOperatorInputManager.getLeftSystemButton()) {
-                    loaderMotor.set(ControlMode.PercentOutput, -0.08);
-                }
-            }
-
-            try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+            default:
+                shooterMotor.set(ControlMode.PercentOutput, 0.0);
+                loaderMotor.set(ControlMode.PercentOutput, 0);
+                autoConditionSatisfied = false;
+                break;
         }
-        System.out.println("[Shooter] left independent service");
+
+        if(!auto) {
+            if(mOperatorInputManager.getRightSystemButton() || mOperatorInputManager.getSouthButton()) {
+                loaderMotor.set(ControlMode.PercentOutput, 0.08);
+            }
+            if(mOperatorInputManager.getLeftSystemButton()) {
+                loaderMotor.set(ControlMode.PercentOutput, -0.08);
+            }
+        }
+
+        try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
     }
 }
