@@ -22,7 +22,9 @@ public class InputManager {
             case "Wireless Controller":
                 mControllerType = ControllerType.PS5;
                 break;
-
+            case "Sony Interactive Entertainment Wireless Controller":
+                mControllerType = ControllerType.PS5;
+                break;
             case "Logitech Dual Action":
                 mControllerType = ControllerType.logitechDigital;
                 break;
