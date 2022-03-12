@@ -344,12 +344,21 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                 calibrateTracking(true);
             }
 
+            if(mDriverInputManager.getLeftSystemButtonPressed()) {
+                setAutoMode(AutoMode.rotate);
+                targetAngle = 90.0;
+            }
+
+            if(mDriverInputManager.getLeftSystemButtonReleased()) {
+                setAutoMode(AutoMode.user);
+            }
+
             delta = 0.0;
             double maxTurn = 0.45;
             double deltaT;
 
             double deadZone = 0.2;
-            double fullSpeed = 0.75;
+            double fullSpeed = 1.0;
 
             double x = 0.0;
             double y = 0.0;
