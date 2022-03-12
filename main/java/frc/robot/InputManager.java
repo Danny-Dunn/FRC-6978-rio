@@ -196,6 +196,18 @@ public class InputManager {
         }
         return false;
     }
+
+    boolean getLeftSystemButtonReleased() {
+        switch (mControllerType) {
+            case PS5:
+                return mStick.getRawButtonReleased(9);
+            case logitechAnalog:
+                return mStick.getRawButtonReleased(7); 
+            case logitechDigital:
+                return mStick.getRawButtonReleased(9);
+        }
+        return false;
+    }
     
     boolean getRightSystemButtonPressed() {
         switch (mControllerType) {
