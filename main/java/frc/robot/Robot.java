@@ -93,11 +93,11 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     mClimb.init();
     
-    //mRealTimeDrive.start();
+    mRealTimeDrive.start();
     //mClimb.start();
-    //mIntake.start(false);
+    mIntake.start(false);
     mShooter.manager.start();
-    //mLimelightController.start();
+    mLimelightController.start();
     //pneumatics_thread.start();
   }
 
