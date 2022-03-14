@@ -48,6 +48,15 @@ public class Shooter extends Subsystem {
 
     private long integralTS;
     private double integralError;
+    private double biasedShooterPID(double target, double kP, double kI) {
+        double error = target - shooterMotor.getSelectedSensorVelocity();
+
+        integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
+        integralTS = System.nanoTime();
+
+        return (error * kP) + /*(integralError * kI)+*/ 0.7;
+    }
+
     private double shooterPID(double target, double kP, double kI) {
         double error = target - shooterMotor.getSelectedSensorVelocity();
 
@@ -60,7 +69,7 @@ public class Shooter extends Subsystem {
     public Shooter(InputManager inputManager, InputManager operatorInputManager) {
         mDriverInputManager = inputManager;
         mOperatorInputManager = operatorInputManager;
-        SmartDashboard.putNumber("Shooter Power", 0.6);
+        SmartDashboard.putNumber("Shooter Power", 0.7);
     }
 
     public boolean init() {
@@ -118,10 +127,11 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterMotor.set(ControlMode.PercentOutput, -shooterPID(19000, 0.000911, 0.00000082));
-                shooterOut = -shooterPID(18000, 0.001111, 0.00000315);
-                if(18000 - shooterMotor.getSelectedSensorVelocity() < 700 || mDriverInputManager.getWestButton()) {
-                    loaderMotor.set(ControlMode.PercentOutput, 0.35);
+                shooterOut = -shooterPID(18000, 0.000421, 0.00085); // (target, P, I) 0.00000540
+                shooterMotor.set(ControlMode.PercentOutput, shooterOut);
+                
+                if(18000 - shooterMotor.getSelectedSensorVelocity() < 100 || mDriverInputManager.getWestButton()) {
+                    //loaderMotor.set(ControlMode.PercentOutput, 0.35);
                     autoConditionSatisfied = true;
                 } else {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
@@ -129,12 +139,13 @@ public class Shooter extends Subsystem {
                 }
                 break;
             case direct:
-                shooterMotor.set(ControlMode.PercentOutput, shooterPower);
-                if(mDriverInputManager.getWestButton()) {
+                shooterMotor.set(ControlMode.PercentOutput, -0.7);
+                /*if(mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.08);
                 } else {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
-                }
+                }*/
+                break;
             default:
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
                 loaderMotor.set(ControlMode.PercentOutput, 0);
@@ -144,10 +155,10 @@ public class Shooter extends Subsystem {
 
         if(!auto) {
             if(mOperatorInputManager.getRightSystemButton() || mOperatorInputManager.getSouthButton()) {
-                loaderMotor.set(ControlMode.PercentOutput, 0.08);
+                loaderMotor.set(ControlMode.PercentOutput, 0.12);
             }
             if(mOperatorInputManager.getLeftSystemButton()) {
-                loaderMotor.set(ControlMode.PercentOutput, -0.08);
+                loaderMotor.set(ControlMode.PercentOutput, -0.12);
             }
         }
 
