@@ -15,7 +15,7 @@ public class Climb implements Runnable, ServiceableModule {
     TalonSRX CFRMotor; 
     TalonSRX CFLMotor; 
 
-    TalonSRX HookCarriageMotor;
+    TalonSRX HookRotateMotor;
 
 
     double catchPoint = -111; //point at which the lift is considered up and should begin bias power
@@ -38,7 +38,7 @@ public class Climb implements Runnable, ServiceableModule {
         CFRMotor = new TalonSRX(21);
         CBLMotor = new TalonSRX(22);
         CBRMotor = new TalonSRX(23);
-        HookCarriageMotor = new TalonSRX(24);
+        HookRotateMotor = new TalonSRX(24);
         CFLMotor.setSelectedSensorPosition(0);
         CFRMotor.setSelectedSensorPosition(0);
         CBLMotor.setSelectedSensorPosition(0);
@@ -145,13 +145,13 @@ public class Climb implements Runnable, ServiceableModule {
                 CBRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            /*if(mOperatorInputManager.getWestButton()) {
-                HookCarriageMotor.set(ControlMode.PercentOutput, 0.15);
-            } else if(mOperatorInputManager.getEastButton()) {
-                HookCarriageMotor.set(ControlMode.PercentOutput, -0.15);
+            if(mOperatorInputManager.getLeftStickX() > 0.5) {
+                HookRotateMotor.set(ControlMode.PercentOutput, 0.15);
+            } else if(mOperatorInputManager.getLeftStickX() < -0.5) {
+                HookRotateMotor.set(ControlMode.PercentOutput, -0.15);
             } else {
-                HookCarriageMotor.set(ControlMode.PercentOutput, 0);
-            }*/ //FIXME: CLIMB SLIDE DISABLED
+                HookRotateMotor.set(ControlMode.PercentOutput, 0);
+            }
             
             if(autoEnabled) {
                 climbPID(100, CBLMotor);
