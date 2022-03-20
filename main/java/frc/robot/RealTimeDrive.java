@@ -45,7 +45,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     double oldYaw;
     double absyaw;
     double realyaw;
-    double ticksPerCentimetre = 1042.18; //new gearboxes
+    double ticksPerCentimetre = 848.4019; //new gearboxes
     //double ticksPerCentimetre = 385.47; //old gearboxes
     double delta; //generic delta variable used for BOTH position and angle
     AHRS navX;
@@ -189,7 +189,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.0418);
+        SmartDashboard.putNumber("angleP", 0.0718);
         SmartDashboard.putNumber("angleP2", 0.0104);
         SmartDashboard.putNumber("angleI", 0.0085);
         SmartDashboard.putNumber("distanceP", 0.046);
@@ -354,7 +354,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             }
 
             delta = 0.0;
-            double maxTurn = 0.45;
+            double maxTurn = 0.55;
             double deltaT;
 
             double deadZone = 0.2;
