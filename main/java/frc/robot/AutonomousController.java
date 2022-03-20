@@ -181,7 +181,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
                 
             switch(autoState) {
                 case 0:
-                    if(pointNum > commands.length) {
+                    if(pointNum > commands[autoSequence].length) {
                         autoState = -1;
                         break;
                     }
@@ -323,10 +323,11 @@ public class AutonomousController implements Runnable, ServiceableModule {
                     } 
                     break;
                 case 7:
-                    if(System.nanoTime() > delayTS + currentDelay) {
+                    if(System.nanoTime() >= delayTS + currentDelay) {
                         pointNum++;
                         autoState = 0;
                     }
+                    break;
                 default:
                     break;
                 
