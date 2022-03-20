@@ -93,10 +93,10 @@ public class AutonomousController implements Runnable, ServiceableModule {
             new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
             new AutoCommand(CommandType.SetShooter, 0, 0),
             new AutoCommand(CommandType.RotateToAngle, 180, 0),
-            new AutoCommand(CommandType.SetIntake, 950, 0.5),
+            new AutoCommand(CommandType.SetIntake, 950, 0.6),
             new AutoCommand(CommandType.Delay, 750, 0),
-            new AutoCommand(CommandType.DriveDistance, 150, 0),
-            new AutoCommand(CommandType.Delay, 300, 0),
+            new AutoCommand(CommandType.DriveDistance, 190, 0),
+            new AutoCommand(CommandType.Delay, 800, 0),
             new AutoCommand(CommandType.SetIntake, -82, 0),
         },
 
