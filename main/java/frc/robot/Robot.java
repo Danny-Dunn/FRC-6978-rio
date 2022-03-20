@@ -94,7 +94,7 @@ public class Robot extends TimedRobot {
     mClimb.init();
     
     mRealTimeDrive.start();
-    //mClimb.start();
+    mClimb.start();
     mIntake.start(false);
     mShooter.manager.start();
     mLimelightController.start();
