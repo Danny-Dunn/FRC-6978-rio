@@ -37,15 +37,15 @@ public class Climb implements Runnable, ServiceableModule {
     public boolean init() {
         CFLMotor = new TalonSRX(20);
         CFRMotor = new TalonSRX(21);
-        CBLMotor = new TalonSRX(22);
+        //CBLMotor = new TalonSRX(22);
         CBRMotor = new TalonSRX(23);
         HookRotateMotor = new TalonSRX(24);
         CFLMotor.setSelectedSensorPosition(0);
         CFRMotor.setSelectedSensorPosition(0);
-        CBLMotor.setSelectedSensorPosition(0);
+        //CBLMotor.setSelectedSensorPosition(0);
         CBRMotor.setSelectedSensorPosition(0);
 
-        CBLMotor.setInverted(true);
+        //CBLMotor.setInverted(true);
         System.out.println("[Climb] finished initialisation");
         return true;
     }
@@ -129,13 +129,13 @@ public class Climb implements Runnable, ServiceableModule {
                 CFRMotor.set(ControlMode.PercentOutput, 0);
             }
 
-            if(mOperatorInputManager.getRightTriggerDigital()){ //back pull 
+            /*if(mOperatorInputManager.getRightTriggerDigital()){ //back pull 
                 backState = true;
-                CBLMotor.set(ControlMode.PercentOutput, pullingPower);
-                CBRMotor.set(ControlMode.PercentOutput, pullingPower);
+                //CBLMotor.set(ControlMode.PercentOutput, pullingPower);
+                //CBRMotor.set(ControlMode.PercentOutput, pullingPower);
             } else if (mOperatorInputManager.getRightBumper()) { //back release
                 backState = false;
-                CBLMotor.set(ControlMode.PercentOutput, pushingPower);
+                //CBLMotor.set(ControlMode.PercentOutput, pushingPower);
                 CBRMotor.set(ControlMode.PercentOutput, pushingPower);
             } else if (backState) { //apply bias
                 CBLMotor.set(ControlMode.PercentOutput, holdingBias);
@@ -144,7 +144,7 @@ public class Climb implements Runnable, ServiceableModule {
             else {
                 CBLMotor.set(ControlMode.PercentOutput, 0);
                 CBRMotor.set(ControlMode.PercentOutput, 0);
-            }
+            }*/
 
             if(mOperatorInputManager.getLeftStickX() > 0.5) {
                 HookRotateMotor.set(ControlMode.PercentOutput, 0.15);
@@ -162,7 +162,7 @@ public class Climb implements Runnable, ServiceableModule {
                 
             }
 
-            try {Thread.sleep(5);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+            try {Thread.sleep(50);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         }
         System.out.println("[Climb] left independent service");
 
