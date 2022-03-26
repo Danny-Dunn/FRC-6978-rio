@@ -22,8 +22,9 @@ public class Climb implements Runnable, ServiceableModule {
     boolean frontState;
     boolean backState;
 
-    double holdingBias = -0.2;
+    double holdingBias = -0.15;
     double pullingPower = -0.5;
+    
     double pushingPower = 0.2;
 
     public Climb(InputManager inputManager) {
