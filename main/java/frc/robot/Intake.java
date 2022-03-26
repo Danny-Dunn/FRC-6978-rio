@@ -22,7 +22,7 @@ public class Intake implements Runnable, ServiceableModule{
         public static boolean intakeFineAdjustEnabled = true;
         public static boolean rollerFineAdjustEnabled = false;
         public static double rollerOutSpeed = -0.35;
-        public static double rollerInSpeed = 0.8;
+        public static double rollerInSpeed = 0.65;
         public static RollerMode defaultRollerMode = RollerMode.direct;
         public static LiftMode defaultLiftMode = LiftMode.position;
     }
