@@ -12,6 +12,7 @@ public class Shooter extends Subsystem {
 
     private TalonSRX shooterMotor; 
     private TalonSRX loaderMotor;
+    private TalonSRX secondWheel;
 
     private double shooterPower;
     private double shooterOut;
@@ -27,6 +28,7 @@ public class Shooter extends Subsystem {
 
     private ShooterControlMode mShooterControlMode;
 
+    
     public void setShooterControlMode(ShooterControlMode mode) {
         System.out.println("[Shooter] set control mode to " + mode.toString());
         switch (mode) {
@@ -48,7 +50,14 @@ public class Shooter extends Subsystem {
 
     private long integralTS;
     private double integralError;
+    double shooterWheelSpeedToTicks(double centimetres){
+        double ticksPerRevolution = 8192;
+        double wheelSurcumfrenece = 30;
+        double ticksPerCentimetter = ticksPerRevolution / wheelSurcumfrenece;
+        return centimetres * ticksPerCentimetter;
+    }
     private double biasedShooterPID(double target, double kP, double kI) {
+
         double error = target - shooterMotor.getSelectedSensorVelocity();
 
         integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
@@ -66,6 +75,15 @@ public class Shooter extends Subsystem {
         return (error * kP) + (integralError * kI);
     }
 
+    private double secondWheelPID(double target, double kP, double kI) {
+        double error = target - secondWheel.getSelectedSensorVelocity();
+
+        integralError += ((System.nanoTime() - integralTS) * error) / 1000000000d;
+        integralTS = System.nanoTime();
+
+        return (error * kP) + (integralError * kI);
+    }
+
     public Shooter(InputManager inputManager, InputManager operatorInputManager) {
         mDriverInputManager = inputManager;
         mOperatorInputManager = operatorInputManager;
@@ -74,11 +92,16 @@ public class Shooter extends Subsystem {
 
     public boolean init() {
         shooterMotor = new TalonSRX(10);
+        secondWheel = new TalonSRX(22); //re-used the backleft climb controller FIXME: re-program BL climb id to 12
         loaderMotor = new TalonSRX(11);
         shooterMotor.setSelectedSensorPosition(0);
         shooterMotor.setSensorPhase(true);
         shooterMotor.setInverted(false);
+        secondWheel.setInverted(true);
+        secondWheel.setSensorPhase(true);
         loaderMotor.setInverted(true);
+
+        shooterMotor.configOpenloopRamp(0);
 
         mShooterControlMode = ShooterControlMode.none;
 
@@ -104,11 +127,11 @@ public class Shooter extends Subsystem {
 
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
+        SmartDashboard.putNumber("secondWheelSpeed", secondWheel.getSelectedSensorVelocity());
         SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
+        SmartDashboard.putNumber("secondWheelCurrent", secondWheel.getStatorCurrent());
         SmartDashboard.putNumber("shooterOut", shooterOut);
-
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
-
         SmartDashboard.putBoolean("intakeLoaderEnabled", autoConditionSatisfied);
 
         if(takeConfigOptions) {
@@ -128,10 +151,16 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -shooterPID(16000, 0.000421, 0.00085); // (target, P, I) 0.00000540
+                shooterOut = -shooterPID(13500, 0.00064, 0.00212); // (target, P, I) 0.00000540 good at 16,000
+                if(shooterOut > 0) {
+                    shooterOut = 0;
+                }
                 shooterMotor.set(ControlMode.PercentOutput, shooterOut);
-                
-                if(16000 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
+                //double secondWheelOut = secondWheelPID(21000, 0.00001, 0);
+                double secondWheelOut = 0.6; //good at 0.6 for launchpad
+                secondWheel.set(ControlMode.PercentOutput, secondWheelOut);
+                //shooterMotor.set(ControlMode.PercentOutput, secondWheelOut);
+                if(13500 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.35);
                     autoConditionSatisfied = true;
                 } else {
@@ -150,6 +179,7 @@ public class Shooter extends Subsystem {
             default:
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
                 loaderMotor.set(ControlMode.PercentOutput, 0);
+                secondWheel.set(ControlMode.PercentOutput, 0);
                 autoConditionSatisfied = false;
                 break;
         }
