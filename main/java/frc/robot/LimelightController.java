@@ -114,5 +114,6 @@ public class LimelightController implements ServiceableModule, Runnable {
             }
         }
         System.out.println("[LimelightController] Left independent service");
+        try {Thread.sleep(10);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
     }
 }
