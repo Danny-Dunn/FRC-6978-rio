@@ -52,9 +52,9 @@ public class Intake implements Runnable, ServiceableModule{
     NetworkTable simTable;
 
     double intakeFullOutPosition = 950;
-    double intakeParkPosition = -82;
+    static double intakeParkPosition = -310;
     double intakeTicksPerRadian = 651.8986469;
-    double intakeUpperPosition = -82;
+    double intakeUpperPosition = -310; // should be -82
     double intakeHorizontalBias = 0.10;
 
    
@@ -63,6 +63,10 @@ public class Intake implements Runnable, ServiceableModule{
         return rollerConditionSatisfied;
     }
     
+    public static double getParkPosition() {
+        return intakeParkPosition;
+    }
+
     public boolean getLiftConditionSatisfied() {
         return liftConditionSatisfied;
     }
@@ -126,7 +130,7 @@ public class Intake implements Runnable, ServiceableModule{
         System.out.println("[Intake] Pulling mechanism for calibration");
         intakeLiftMotor.set(ControlMode.PercentOutput, -0.15);
         try {Thread.sleep(700);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
-        intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
+        intakeLiftMotor.setSelectedSensorPosition(intakeParkPosition);
         System.out.println("[Intake] Finished encoder calibration");
 
         targetState = false;
@@ -282,7 +286,7 @@ public class Intake implements Runnable, ServiceableModule{
                         liftOut = 0.25;
                     } else if(intakeTargetPosition == intakeFullOutPosition)  {
                         if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
-                            liftOut = 0.08;
+                            //liftOut = 0.08;
                         }
                     }
                     break;
