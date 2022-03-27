@@ -16,6 +16,8 @@ public class Shooter extends Subsystem {
 
     private double shooterPower;
     private double shooterOut;
+    private double lastCalibrationStageTS;
+    private double calibrationPercentage;
 
     private boolean auto;
     private boolean autoConditionSatisfied;
@@ -23,6 +25,7 @@ public class Shooter extends Subsystem {
     public enum ShooterControlMode {
         velocity,
         direct,
+        calibration,
         none
     };
 
@@ -38,6 +41,9 @@ public class Shooter extends Subsystem {
                     integralTS = System.nanoTime();
                 }
                 break;
+            case calibration:
+                lastCalibrationStageTS = System.currentTimeMillis();
+                calibrationPercentage = 1;
             default:
                 break;
         }
@@ -46,6 +52,10 @@ public class Shooter extends Subsystem {
 
     public boolean getAutoConditionSatisfied() {
         return autoConditionSatisfied;
+    }
+
+    public void startShooterCalibration() {
+        setShooterControlMode(ShooterControlMode.calibration);
     }
 
     private long integralTS;
@@ -63,7 +73,7 @@ public class Shooter extends Subsystem {
         integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
         integralTS = System.nanoTime();
 
-        return (error * kP) + /*(integralError * kI)+*/ 0.7;
+        return (error * kP) + (((target / 256) + 2.5) / 100);
     }
 
     private double shooterPID(double target, double kP, double kI) {
@@ -146,12 +156,14 @@ public class Shooter extends Subsystem {
                 setShooterControlMode(ShooterControlMode.velocity);
             } else if(mOperatorInputManager.getWestButtonReleased()) {
                 setShooterControlMode(ShooterControlMode.none);
+            } else if(mOperatorInputManager.getEastButtonPressed()) {
+                startShooterCalibration();;
             }
         }
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -shooterPID(16000, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
+                shooterOut = -biasedShooterPID(16000, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
                 if(shooterOut > 0) {
                     shooterOut = 0;
                 }
@@ -175,6 +187,22 @@ public class Shooter extends Subsystem {
                 } else {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
                 }*/
+                break;
+            case calibration:
+                shooterMotor.set(ControlMode.PercentOutput, -calibrationPercentage / 100);
+                if(System.currentTimeMillis() - lastCalibrationStageTS > 500) {
+                    double cumulative = 0;
+                    for(int i = 0; i < 450; i++) {
+                        cumulative += shooterMotor.getSelectedSensorVelocity();
+                    }
+                    double average = cumulative / 450;
+                    System.out.println("Shooter cal: " + calibrationPercentage + ":" + average);
+                    lastCalibrationStageTS = System.currentTimeMillis();
+                    calibrationPercentage += 1;
+                    if(calibrationPercentage > 75) {
+                        setShooterControlMode(ShooterControlMode.none);
+                    }
+                }
                 break;
             default:
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
