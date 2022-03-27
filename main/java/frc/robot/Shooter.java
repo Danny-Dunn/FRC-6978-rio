@@ -99,7 +99,7 @@ public class Shooter extends Subsystem {
         shooterMotor.setInverted(false);
         secondWheel.setInverted(true);
         secondWheel.setSensorPhase(true);
-        loaderMotor.setInverted(true);
+        loaderMotor.setInverted(false);
 
         shooterMotor.configOpenloopRamp(0);
 
@@ -151,16 +151,16 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -shooterPID(13500, 0.00064, 0.00212); // (target, P, I) 0.00000540 good at 16,000
+                shooterOut = -shooterPID(16000, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
                 if(shooterOut > 0) {
                     shooterOut = 0;
                 }
                 shooterMotor.set(ControlMode.PercentOutput, shooterOut);
                 //double secondWheelOut = secondWheelPID(21000, 0.00001, 0);
-                double secondWheelOut = 0.6; //good at 0.6 for launchpad
+                double secondWheelOut = 0.2; //good at 0.6 for launchpad
                 secondWheel.set(ControlMode.PercentOutput, secondWheelOut);
                 //shooterMotor.set(ControlMode.PercentOutput, secondWheelOut);
-                if(13500 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
+                if(16000 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.35);
                     autoConditionSatisfied = true;
                 } else {
