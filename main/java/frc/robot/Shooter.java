@@ -152,7 +152,7 @@ public class Shooter extends Subsystem {
             shooterPower = SmartDashboard.getNumber("Shooter Power", 0.6);
         }
     }
-    
+
     public void run() {
         
         if(!auto) {
@@ -167,7 +167,7 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -biasedShooterPID(16000, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
+                shooterOut = -biasedShooterPID(16500, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
                 if(shooterOut > 0) {
                     shooterOut = 0;
                 }
@@ -176,7 +176,7 @@ public class Shooter extends Subsystem {
                 double secondWheelOut = 0.2; //good at 0.6 for launchpad
                 secondWheel.set(ControlMode.PercentOutput, secondWheelOut);
                 //shooterMotor.set(ControlMode.PercentOutput, secondWheelOut);
-                if(16000 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
+                if(16500 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.35);
                     autoConditionSatisfied = true;
                 } else {
