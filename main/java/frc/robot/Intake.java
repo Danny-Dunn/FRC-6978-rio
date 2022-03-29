@@ -286,7 +286,7 @@ public class Intake implements Runnable, ServiceableModule{
                         liftOut = 0.25;
                     } else if(intakeTargetPosition == intakeFullOutPosition)  {
                         if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
-                            //liftOut = 0.08;
+                            if(auto) liftOut = 0.08;
                         }
                     }
                     break;
