@@ -189,7 +189,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.0318);
+        SmartDashboard.putNumber("angleP", 0.053);
         SmartDashboard.putNumber("angleP2", 0.0104);
         SmartDashboard.putNumber("angleI", 0.0/*115*/);
         SmartDashboard.putNumber("distanceP", 0.046);
@@ -354,7 +354,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             }
 
             delta = 0.0;
-            double maxTurn = 0.55;
+            double maxTurn = 0.45;
             double deltaT;
 
             double deadZone = 0.2;
@@ -378,13 +378,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     //
                     y = 0;
 
-                    autoConditionSatisfied = (Math.abs(delta) < 2.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
+                    autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
                     break;
 
                 case distance:
                     delta = targetDistance - ((((leftPosition - leftOffset)+(rightPosition - rightOffset))/2) / ticksPerCentimetre);
                     x = 0;
                     y = delta * distanceP;
+                    y = (y > maxTurn)? maxTurn: y;
+                    y = (y < -maxTurn)? -maxTurn: y;
                     autoConditionSatisfied = (Math.abs(delta) < 2.0);
                     break;
 
