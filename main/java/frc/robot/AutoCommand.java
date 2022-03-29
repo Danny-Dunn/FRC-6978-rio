@@ -9,6 +9,7 @@ public class AutoCommand {
         SetIntake,
         DriveDistance,
         SetShooter,
+        RunLoader,
         Delay
     };
 
@@ -21,16 +22,19 @@ public class AutoCommand {
     double aparam;
     double bparam;
 
+    //drive to coordinate
     public AutoCommand(double X, double Y) {
         type = CommandType.DriveToPoint;
         point = new Vector2d(X, Y);
     }
 
+    //drive distance
     public AutoCommand(double distance) {
         type = CommandType.DriveDistance;
         this.distance = distance;
     }
 
+    //other commands
     public AutoCommand(CommandType type, double aparam, double bparam) {
         this.type = type;
         this.aparam = aparam;

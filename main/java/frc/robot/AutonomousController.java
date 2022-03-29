@@ -219,6 +219,9 @@ public class AutonomousController implements Runnable, ServiceableModule {
                         case DriveDistance:
                             autoState = 4;
                             break;
+                        case RunLoader:
+                            autoState = 8;
+                            break;
                         case Delay:
                             delayTS = System.nanoTime();
                             currentDelay = (long)commands[autoSequence][pointNum].aparam * 1000000l;
@@ -332,6 +335,11 @@ public class AutonomousController implements Runnable, ServiceableModule {
                         pointNum++;
                         autoState = 0;
                     }
+                    break;
+                case 8: //set motor
+                    mShooter.runLoader(commands[autoSequence][pointNum].aparam);
+                    pointNum++;
+                    autoState = 0;
                     break;
                 default:
                     break;

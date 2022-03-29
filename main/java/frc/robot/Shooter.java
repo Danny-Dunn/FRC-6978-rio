@@ -50,6 +50,10 @@ public class Shooter extends Subsystem {
         mShooterControlMode = mode;
     }
 
+    public void runLoader(double runSpeed){
+        loaderMotor.set(ControlMode.PercentOutput, runSpeed); 
+    }
+
     public boolean getAutoConditionSatisfied() {
         return autoConditionSatisfied;
     }
