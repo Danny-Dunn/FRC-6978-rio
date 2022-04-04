@@ -82,7 +82,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     double angleP2;
     double distanceP;
     double angleI;
+    double angleD;
     double eIntegral;
+    double previousError;
     long angleTS;
     long autoTS;
 
@@ -189,9 +191,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.053);
+        SmartDashboard.putNumber("angleP", 0.052); //0.03
         SmartDashboard.putNumber("angleP2", 0.0104);
         SmartDashboard.putNumber("angleI", 0.0/*115*/);
+        SmartDashboard.putNumber("angleD", 150000.0); //subtracted the longer you run
         SmartDashboard.putNumber("distanceP", 0.046);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
     }
@@ -318,6 +321,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             angleP = SmartDashboard.getNumber("angleP", 0.0015);
             angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
             angleI = SmartDashboard.getNumber("angleI", 0.00084);
+            angleD = SmartDashboard.getNumber("angleD", 0.0);
             distanceP = SmartDashboard.getNumber("distanceP", 0.0045);
         }
     }
@@ -366,12 +370,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             switch(mAutoMode) {
                 case rotate:
                     delta = targetAngle - (realyaw - targetAngleOffset);
-
+                    deltaT = (System.nanoTime() - angleTS);
                     eIntegral += ((System.nanoTime() - angleTS) * delta) / 10000000000d;
                     angleTS = System.nanoTime();
                     SmartDashboard.putNumber("eIntegral", eIntegral);
 
-                    x = (delta * angleP) + (eIntegral * angleI);
+                    double derivative = (delta - previousError) / deltaT;
+                    previousError = delta;
+
+                    x = (delta * angleP) + (eIntegral * angleI) + (derivative * angleD);
 
                     x = (x > maxTurn)? maxTurn: x;
                     x = (x < -maxTurn)? -maxTurn: x;
