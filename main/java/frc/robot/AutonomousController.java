@@ -62,7 +62,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
         new Vector2d(0, 0),
     };
 
-    private int autoSequence = 2;
+    private int autoSequence = 4;
 
     AutoCommand commands[][] = {
         { //pick up ball, shoot
@@ -113,6 +113,24 @@ public class AutonomousController implements Runnable, ServiceableModule {
         { //drive
             new AutoCommand(CommandType.DriveDistance, 150, 0),
         },
+
+        { //pick up ball, spin, shoot
+            new AutoCommand(CommandType.RotateToAngle, -2, 0),
+            new AutoCommand(CommandType.SetIntake, 950, 0.45),
+            new AutoCommand(CommandType.Delay, 650, 0),
+            new AutoCommand(CommandType.DriveDistance, 190, 0),
+            new AutoCommand(CommandType.Delay, 400, 0),
+            new AutoCommand(CommandType.SetIntake, Intake.getParkPosition(), 0.4),
+            new AutoCommand(CommandType.Delay, 300, 0),
+            new AutoCommand(CommandType.SetIntake, Intake.getParkPosition(), 0),
+            new AutoCommand(CommandType.RunLoader, 0, 0),
+            new AutoCommand(CommandType.RotateToAngle, 182, 0),
+            new AutoCommand(CommandType.DriveDistance, -30, 0),
+            //new AutoCommand(CommandType.RotateToAngle, -20, 0), //realignment
+            new AutoCommand(CommandType.SetShooter, 1, 1), 
+            new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
+            new AutoCommand(CommandType.SetShooter, 0, 0),
+        }
     };
 
     double dx;
