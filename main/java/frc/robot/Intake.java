@@ -22,7 +22,7 @@ public class Intake implements Runnable, ServiceableModule{
         public static boolean intakeFineAdjustEnabled = true;
         public static boolean rollerFineAdjustEnabled = false;
         public static double rollerOutSpeed = -0.35;
-        public static double rollerInSpeed = 0.65;
+        public static double rollerInSpeed = 0.45;
         public static RollerMode defaultRollerMode = RollerMode.direct;
         public static LiftMode defaultLiftMode = LiftMode.position;
     }
@@ -286,7 +286,7 @@ public class Intake implements Runnable, ServiceableModule{
                         liftOut = 0.25;
                     } else if(intakeTargetPosition == intakeFullOutPosition)  {
                         if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
-                            if(auto) liftOut = 0.08;
+                            liftOut = 0.08;
                         }
                     }
                     break;
