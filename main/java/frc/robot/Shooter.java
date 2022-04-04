@@ -167,17 +167,17 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -biasedShooterPID(16500, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
+                shooterOut = -biasedShooterPID(13000, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
                 if(shooterOut > 0) {
                     shooterOut = 0;
                 }
                 shooterMotor.set(ControlMode.PercentOutput, shooterOut);
                 //double secondWheelOut = secondWheelPID(21000, 0.00001, 0);
-                double secondWheelOut = 0.2; //good at 0.6 for launchpad
+                double secondWheelOut = -1.0; //good at 0.6 for launchpad
                 secondWheel.set(ControlMode.PercentOutput, secondWheelOut);
                 //shooterMotor.set(ControlMode.PercentOutput, secondWheelOut);
-                if(16500 - shooterMotor.getSelectedSensorVelocity() < 250 || mDriverInputManager.getWestButton()) {
-                    loaderMotor.set(ControlMode.PercentOutput, 0.35);
+                if(13000 - shooterMotor.getSelectedSensorVelocity() < 150 || mDriverInputManager.getWestButton()) {
+                    loaderMotor.set(ControlMode.PercentOutput, 0.55);
                     autoConditionSatisfied = true;
                 } else {
                     loaderMotor.set(ControlMode.PercentOutput, 0);
