@@ -18,7 +18,7 @@ public class LimelightController implements ServiceableModule, Runnable {
     NetworkTableEntry tx;
     NetworkTableEntry ty;
 
-    double targetHeight = 176.5; //height off ground
+    double targetHeight = 195; //height off ground
 
     public LimelightController(RealTimeDrive realTimeDrive, InputManager driverInputManager) {
         mRealTimeDrive = realTimeDrive;
@@ -83,8 +83,13 @@ public class LimelightController implements ServiceableModule, Runnable {
 		return x_intersect;
     }
 
+    double cameraAngleToDistance(double camY) {
+        double angle = camY + 27;
+        return targetHeight / Math.tan(Math.toRadians(angle));
+    }
+
     public void standby(boolean takeInputs) {
-        SmartDashboard.putNumber("estimatedDistance", calcDistance(ty.getDouble(0)));
+        SmartDashboard.putNumber("estimatedDistance", cameraAngleToDistance(ty.getDouble(0)));
         SmartDashboard.putNumber("tY", ty.getDouble(0));
         SmartDashboard.putNumber("tX", tx.getDouble(0));
     }
