@@ -130,6 +130,13 @@ public class AutonomousController implements Runnable, ServiceableModule {
             new AutoCommand(CommandType.SetShooter, 1, 1), 
             new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
             new AutoCommand(CommandType.SetShooter, 0, 0),
+        },
+
+        { //SZANDER AUTO: lower intake, spin intake wheels, drive forward 1.9m, spin 180d, shoot, spin 45d, lower intake, spin intake wheels, drive forward 0.5m 
+            new AutoCommand(CommandType.SetIntake, 950, 0.45),
+            new AutoCommand(CommandType.Delay, 650, 0),
+            new AutoCommand(CommandType.DriveDistance, 190, 0),
+            new AutoCommand(CommandType.RotateToAngle, 182, 0),
         }
     };
 
