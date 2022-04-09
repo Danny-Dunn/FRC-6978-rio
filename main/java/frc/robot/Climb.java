@@ -9,18 +9,21 @@ public class Climb implements Runnable, ServiceableModule {
     
     InputManager mOperatorInputManager;
 
-    TalonSRX CBRMotor; 
-    TalonSRX CBLMotor; 
+    //TalonSRX CBRMotor; 
+    //TalonSRX CBLMotor; 
 
     TalonSRX CFRMotor; 
     TalonSRX CFLMotor; 
 
-    TalonSRX HookRotateMotor;
+    TalonSRX LeftHookRotateMotor;
+
+    TalonSRX RightHookRotateMotor;
 
 
     double catchPoint = -111; //point at which the lift is considered up and should begin bias power
     boolean frontState;
     boolean backState;
+    boolean rotateSpeedState;
 
     double holdingBias = -0.15;
     double pullingPower = -0.5;
@@ -38,12 +41,13 @@ public class Climb implements Runnable, ServiceableModule {
         CFLMotor = new TalonSRX(20);
         CFRMotor = new TalonSRX(21);
         //CBLMotor = new TalonSRX(22);
-        CBRMotor = new TalonSRX(23);
-        HookRotateMotor = new TalonSRX(24);
+        //CBRMotor = new TalonSRX(23);
+        LeftHookRotateMotor = new TalonSRX(24);
+        RightHookRotateMotor = new TalonSRX(23);
         CFLMotor.setSelectedSensorPosition(0);
         CFRMotor.setSelectedSensorPosition(0);
         //CBLMotor.setSelectedSensorPosition(0);
-        CBRMotor.setSelectedSensorPosition(0);
+        //CBRMotor.setSelectedSensorPosition(0);
 
         //CBLMotor.setInverted(true);
         System.out.println("[Climb] finished initialisation");
@@ -78,6 +82,8 @@ public class Climb implements Runnable, ServiceableModule {
         mThread = new Thread(this, "Climb");
         mThread.start();
 
+        rotateSpeedState = false;
+
         return true;
     }
 
@@ -100,11 +106,33 @@ public class Climb implements Runnable, ServiceableModule {
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("CFL Current", CFLMotor.getStatorCurrent());
         SmartDashboard.putNumber("CFR Current", CFRMotor.getStatorCurrent());
-        SmartDashboard.putNumber("CBL Current", CBLMotor.getStatorCurrent());
-        SmartDashboard.putNumber("CBR Current", CBRMotor.getStatorCurrent());
+        //SmartDashboard.putNumber("CBL Current", CBLMotor.getStatorCurrent());
+        //SmartDashboard.putNumber("CBR Current", CBRMotor.getStatorCurrent());
     }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
+
+    int climbState = 0;
+    public void advancedClimb() {
+        switch (climbState) {
+            case 0:
+                // extend climb bars
+                break;
+            case 1:
+                //rotate climb bars on to bar  
+                break;
+            case 2:
+                //pull the 
+                break;
+            default:
+                break;
+        }
+    }
+
+
+
+
+
     public void run() {
         exitFlag = false;
         backState = false;
@@ -146,17 +174,28 @@ public class Climb implements Runnable, ServiceableModule {
                 CBRMotor.set(ControlMode.PercentOutput, 0);
             }*/
 
+            double rotateOutPower = (rotateSpeedState)? 0.75 : 0.20;
+
+            double rotateInPower = (rotateSpeedState)? 0.80 : 0.25;
+
             if(mOperatorInputManager.getLeftStickX() > 0.5) {
-                HookRotateMotor.set(ControlMode.PercentOutput, 0.15);
+                LeftHookRotateMotor.set(ControlMode.PercentOutput, rotateInPower);
+                RightHookRotateMotor.set(ControlMode.PercentOutput, rotateInPower);
             } else if(mOperatorInputManager.getLeftStickX() < -0.5) {
-                HookRotateMotor.set(ControlMode.PercentOutput, -0.15);
+                LeftHookRotateMotor.set(ControlMode.PercentOutput, -rotateOutPower);
+                RightHookRotateMotor.set(ControlMode.PercentOutput, -rotateOutPower);
             } else {
-                HookRotateMotor.set(ControlMode.PercentOutput, 0);
+                LeftHookRotateMotor.set(ControlMode.PercentOutput, 0);
+                RightHookRotateMotor.set(ControlMode.PercentOutput, 0);
+            }
+
+            if(mOperatorInputManager.getRightBumperPressed()) {
+                rotateSpeedState = !rotateSpeedState;
             }
             
             if(autoEnabled) {
-                climbPID(100, CBLMotor);
-                climbPID(100, CBRMotor);
+                //climbPID(100, CBLMotor);
+                //climbPID(100, CBRMotor);
                 climbPID(200, CFLMotor);
                 climbPID(200, CFRMotor);
                 
