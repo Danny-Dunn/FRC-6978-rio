@@ -191,7 +191,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.052); //0.03
+        SmartDashboard.putNumber("angleP", 0.032); //0.03
         SmartDashboard.putNumber("angleP2", 0.0104);
         SmartDashboard.putNumber("angleI", 0.0/*115*/);
         SmartDashboard.putNumber("angleD", 150000.0); //subtracted the longer you run
