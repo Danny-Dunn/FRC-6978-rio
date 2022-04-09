@@ -39,11 +39,12 @@ public class Robot extends TimedRobot {
     
     navX = new AHRS(Port.kMXP);
     mRealTimeDrive = new RealTimeDrive(mDriverInputManager, navX);
+    mLimelightController = new LimelightController(mRealTimeDrive, mDriverInputManager);
+
     mIntake = new Intake(mOperatorInputManager);
     mClimb = new Climb(mOperatorInputManager);
-    mShooter = new Shooter(mDriverInputManager, mOperatorInputManager);
+    mShooter = new Shooter(mDriverInputManager, mOperatorInputManager, mLimelightController);
     mAutonomousController = new AutonomousController(mRealTimeDrive, mIntake, mShooter);
-    mLimelightController = new LimelightController(mRealTimeDrive, mDriverInputManager);
 
     
     mRealTimeDrive.init();
@@ -95,8 +96,8 @@ public class Robot extends TimedRobot {
     
     mRealTimeDrive.start();
     mClimb.start();
-    mIntake.start(false);
     mShooter.manager.start();
+    mIntake.start(false);
     mLimelightController.start();
     //pneumatics_thread.start();
   }
