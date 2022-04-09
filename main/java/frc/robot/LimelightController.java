@@ -11,14 +11,17 @@ public class LimelightController implements ServiceableModule, Runnable {
     private RealTimeDrive mRealTimeDrive;
     private boolean exitFlag;
     private boolean rotateFlag;
+    private boolean shouldRotateFlag;
+    private boolean shooterReady;
     
     InputManager mDriverInputManager;
     
     NetworkTableEntry tp;
     NetworkTableEntry tx;
     NetworkTableEntry ty;
+    NetworkTableEntry ledMode;
 
-    double targetHeight = 195; //height off ground
+    double targetHeight = 192; //height off ground
 
     public LimelightController(RealTimeDrive realTimeDrive, InputManager driverInputManager) {
         mRealTimeDrive = realTimeDrive;
@@ -28,9 +31,12 @@ public class LimelightController implements ServiceableModule, Runnable {
     public boolean init() {
         NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
 
-        tp = table.getEntry("tp");
+        tp = table.getEntry("tv");
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
+        ledMode = table.getEntry("ledMode");
+
+        ledMode.setDouble(1); //turn off LEDs
         return true;
     }
 
@@ -43,6 +49,8 @@ public class LimelightController implements ServiceableModule, Runnable {
 
         mThread = new Thread(this, "AutonomousController");
         mThread.start();
+
+        shooterReady = false;
 
         return true;
     }
@@ -84,31 +92,58 @@ public class LimelightController implements ServiceableModule, Runnable {
     }
 
     double cameraAngleToDistance(double camY) {
-        double angle = camY + 27;
+        double angle = camY + 39;
         return targetHeight / Math.tan(Math.toRadians(angle));
+    }
+
+    public double getDistance() {
+        return cameraAngleToDistance(ty.getDouble(0));
+    }
+
+    public double getDistanceFinal() {
+        double y = ty.getDouble(0);
+        ledMode.setDouble(1); //turn off LEDs
+        shooterReady = false;
+        return cameraAngleToDistance(y);
+    }
+
+    public boolean getShooterReady() {
+        return shooterReady;
     }
 
     public void standby(boolean takeInputs) {
         SmartDashboard.putNumber("estimatedDistance", cameraAngleToDistance(ty.getDouble(0)));
         SmartDashboard.putNumber("tY", ty.getDouble(0));
         SmartDashboard.putNumber("tX", tx.getDouble(0));
+        SmartDashboard.putBoolean("tV", tp.getDouble(0) == 1);
+        SmartDashboard.putBoolean("shooterReady", shooterReady);
+        SmartDashboard.putBoolean("shouldRotate", shouldRotateFlag);
     }
 
     public void run() {
         System.out.println("[LimelightController] Entered independent service");
         while(!exitFlag) {
             if(mDriverInputManager.getWestButtonPressed()) {
+                ledMode.setDouble(0);
+                shouldRotateFlag = true;
+                shooterReady = false;
+            }
+
+            if(mDriverInputManager.getWestButtonReleased()) {
+                mRealTimeDrive.setAutoMode(AutoMode.user);
+                rotateFlag = false;
+                shouldRotateFlag = false;
+            }
+
+            if(shouldRotateFlag && (tp.getDouble(0) == 1)) {
                 mRealTimeDrive.targetAngle = tx.getDouble(0);
                 mRealTimeDrive.targetAngle = mRealTimeDrive.absyaw + tx.getDouble(0);
                 if(mRealTimeDrive.mAutoMode == AutoMode.user) {
                     mRealTimeDrive.setAutoMode(AutoMode.rotate);
                 }
                 rotateFlag = true;
-            }
-
-            if(mDriverInputManager.getWestButtonReleased()) {
-                mRealTimeDrive.setAutoMode(AutoMode.user);
-                rotateFlag = false;
+                shouldRotateFlag = false;
+                shooterReady = true;
             }
 
             if(rotateFlag) {
