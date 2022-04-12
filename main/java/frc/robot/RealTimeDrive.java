@@ -19,10 +19,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     Thread mThread;
     
     //motors
-    TalonFX DL1Motor;
-    TalonFX DL2Motor;
-    TalonFX DR1Motor;
-    TalonFX DR2Motor;
+    TalonSRX DL1Motor;
+    TalonSRX DL2Motor;
+    TalonSRX DR1Motor;
+    TalonSRX DR2Motor;
     public TalonSRX shooterMotor;
     TalonSRX loaderMotor;
     
@@ -220,10 +220,15 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
 
     public boolean init() {
         //setup motors
-        DL1Motor = new TalonFX(1);
-        DL2Motor = new TalonFX(2);
-        DR1Motor = new TalonFX(3);
-        DR2Motor = new TalonFX(4);
+        DL1Motor = new TalonSRX(1);
+        DL2Motor = new TalonSRX(2);
+        DR1Motor = new TalonSRX(3);
+        DR2Motor = new TalonSRX(4);
+
+        DL1Motor.setInverted(true);
+        DR1Motor.setInverted(true);
+        DL2Motor.setInverted(true);
+        DR2Motor.setInverted(true);
 
         if(!RobotBase.isReal()) simTable = NetworkTableInstance.getDefault().getTable("simTable"); //simulation dummy outputs
 
