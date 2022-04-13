@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Intake implements Runnable, ServiceableModule{
     private Thread mThread;
     private boolean auto;
+    private boolean hasRun;
 
     InputManager mOperatorInputManager;
 
@@ -52,9 +53,9 @@ public class Intake implements Runnable, ServiceableModule{
     NetworkTable simTable;
 
     double intakeFullOutPosition = 950;
-    static double intakeParkPosition = -310;
+    static double intakeParkPosition = -463;
     double intakeTicksPerRadian = 651.8986469;
-    double intakeUpperPosition = -310; // should be -82
+    double intakeUpperPosition = -463; // should be -82
     double intakeHorizontalBias = 0.10;
 
    
@@ -74,6 +75,7 @@ public class Intake implements Runnable, ServiceableModule{
     public void setLift(double setpoint) {
         liftConditionSatisfied = false;
         intakeTargetPosition = setpoint;
+        System.out.println("Set intake lift to " + setpoint);
     }
 
     public void setRollers(RollerMode mode, double power) {
@@ -86,6 +88,7 @@ public class Intake implements Runnable, ServiceableModule{
         mOperatorInputManager = inputManager;
         mRollerMode = RollerMode.none;
         mLiftMode = LiftMode.none;
+        hasRun = false;
     }
 
     public void simOut(String tag, Double value) {
@@ -115,6 +118,15 @@ public class Intake implements Runnable, ServiceableModule{
         return start(false);
     }
 
+    public void calibrateIntake() {
+        System.out.println("[Intake] Pulling mechanism for calibration");
+        intakeLiftMotor.set(ControlMode.PercentOutput, -0.2);
+        try {Thread.sleep(700);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+        intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
+        System.out.println("[Intake] Finished encoder calibration");
+        intakeLiftMotor.set(ControlMode.PercentOutput, 0);
+    }
+
     public boolean start(boolean auto) {
         boolean ret;
 
@@ -127,12 +139,9 @@ public class Intake implements Runnable, ServiceableModule{
         
         this.auto = auto;
 
-        System.out.println("[Intake] Pulling mechanism for calibration");
-        intakeLiftMotor.set(ControlMode.PercentOutput, -0.15);
-        try {Thread.sleep(700);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
-        intakeLiftMotor.setSelectedSensorPosition(intakeParkPosition);
-        System.out.println("[Intake] Finished encoder calibration");
-
+        if(!hasRun)
+            calibrateIntake();
+        
         targetState = false;
 
         mLiftMode = IntakeConfig.defaultLiftMode;
@@ -141,6 +150,7 @@ public class Intake implements Runnable, ServiceableModule{
         mThread = new Thread(this, "Intake");
         mThread.start();
 
+        hasRun = true;
         return true;
     }
 
@@ -195,12 +205,17 @@ public class Intake implements Runnable, ServiceableModule{
         intakeTargetPosition = intakeParkPosition;
         long lastCalcTS = System.nanoTime();
         System.out.println("[Intake] entered independent service");
+        mOperatorInputManager.getRightBumperPressed();
+        mOperatorInputManager.getSouthButtonPressed();
+        mOperatorInputManager.getSouthButtonReleased();
+        mOperatorInputManager.getNorthButtonReleased();
+        mOperatorInputManager.getNorthButtonPressed();
         while(!exitFlag) {
             double rollerOut = 0.0;
             
             if(!auto) {
                 if(mOperatorInputManager.getPOV() == 90) {
-                    mLiftMode = (mLiftMode == LiftMode.direct)? LiftMode.position : LiftMode.direct;
+                    mLiftMode = (mLiftMode.equals(LiftMode.direct))? LiftMode.position : LiftMode.direct;
                 }
                 
                 if(mOperatorInputManager.getSouthButtonPressed()) {
@@ -211,6 +226,9 @@ public class Intake implements Runnable, ServiceableModule{
                     setRollers(RollerMode.direct, 0);
                 } else if(mOperatorInputManager.getNorthButtonReleased()) {
                     setRollers(RollerMode.direct, 0);
+                }
+                if(mOperatorInputManager.getRightBumper()) {
+                    calibrateIntake();
                 }
             }
             
@@ -276,7 +294,7 @@ public class Intake implements Runnable, ServiceableModule{
 
                     liftConditionSatisfied = Math.abs(intakeTargetPosition - intakeLiftMotor.getSelectedSensorPosition()) < 100;
 
-                    liftOut = -intakeLiftPID(intakeTargetPosition, -0.0022, 0);
+                    liftOut = -intakeLiftPID(intakeTargetPosition, -0.0025, 0);
                     liftOut = (liftOut > 0.19)? 0.19 : liftOut;
                     liftOut = (liftOut < -0.29)? -0.29 : liftOut;
 
