@@ -116,7 +116,7 @@ public class SubsystemManager implements Runnable {
     }
 
     public boolean start() {
-        if(mSubsystemStatus != SubsystemStatus.inactive) return false;
+        if(mSubsystemStatus == SubsystemStatus.normal) return false;
         
         if(!mSubsystem.setup()) return false;
         
