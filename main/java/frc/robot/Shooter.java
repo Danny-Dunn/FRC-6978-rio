@@ -140,8 +140,9 @@ public class Shooter extends Subsystem {
         mSecondWheelDriver.setDriverInversion(true);
         mSecondWheelDriver.setEncoderInversion(true);
 
-        mSecondWheelController = new CalibratedVelocityController(mSecondWheelDriver, 2050); //FIXME: second wheel ticks
-        
+        mSecondWheelController = new CalibratedVelocityController(mSecondWheelDriver, 2050); //FIXME: second wheel calibration
+        mSecondWheelController.setPIDConstants(0, 0, 0); //FIXME: determine PID constants for second wheel
+
         loaderMotor = new TalonSRX(11);
         
         
