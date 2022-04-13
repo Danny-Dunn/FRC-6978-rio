@@ -29,6 +29,9 @@ public class Climb implements Runnable, ServiceableModule {
     double pullingPower = -0.5;
     
     double pushingPower = 0.2;
+    double fastPushingPower = 0.4;
+
+    double highPosition = 15000;
 
     public Climb(InputManager inputManager) {
         mOperatorInputManager = inputManager;
@@ -129,9 +132,36 @@ public class Climb implements Runnable, ServiceableModule {
         }
     }
 
+    void extendRightArm() {
+        if(CFRMotor.getSelectedSensorPosition() > highPosition) {
+            CFRMotor.set(ControlMode.PercentOutput, pushingPower);
+        } else {
+            CFRMotor.set(ControlMode.PercentOutput, fastPushingPower);
+        }
+    }
 
+    void extendLeftArm() {
+        if(CFLMotor.getSelectedSensorPosition() > highPosition) {
+            CFLMotor.set(ControlMode.PercentOutput, pushingPower);
+        } else {
+            CFLMotor.set(ControlMode.PercentOutput, fastPushingPower);
+        }
+    }
 
+    void climbArms() {
+        CFRMotor.set(ControlMode.PercentOutput, pullingPower);
+        CFLMotor.set(ControlMode.PercentOutput, pullingPower);
+    }
 
+    void holdArms() {
+        CFLMotor.set(ControlMode.PercentOutput, holdingBias);
+        CFRMotor.set(ControlMode.PercentOutput, holdingBias);
+    }
+
+    void releaseArms() {
+        CFLMotor.set(ControlMode.PercentOutput, 0);
+        CFRMotor.set(ControlMode.PercentOutput, 0);
+    }
 
     public void run() {
         exitFlag = false;
@@ -142,8 +172,8 @@ public class Climb implements Runnable, ServiceableModule {
             
             if(mOperatorInputManager.getLeftTriggerDigital()){ //front pull 
                 frontState = true;
-                CFLMotor.set(ControlMode.PercentOutput, pullingPower);
-                CFRMotor.set(ControlMode.PercentOutput, pullingPower);
+                extendLeftArm();
+                extendRightArm();
             } else if (mOperatorInputManager.getLeftBumper()) { //front release
                 frontState = false;
                 CFLMotor.set(ControlMode.PercentOutput, pushingPower);
