@@ -27,13 +27,15 @@ public class Shooter extends Subsystem {
     private long stabilityTS;
     private boolean shooterWheelStable;
 
+    private double shooterTicksPerVolt = 2050;
+
     private double shooterCalibration[][] = { //distance(cm), main wheel speed
         {440, 15800},
         {385, 14500},
         {336, 13500},
-        {250, 11500},
-        {170, 9100},
-        {115, 7800},
+        {250, 10500},
+        {170, 8900},
+        {115, 7700},
     };
 
     private double secondWheelCalibration[][] = { //distance(cm), main wheel speed
@@ -73,6 +75,10 @@ public class Shooter extends Subsystem {
         mShooterControlMode = mode;
     }
 
+    public void setShooterSpeed(double shooterSpeed) {
+        shooterTarget = shooterSpeed;
+    }
+
     public void runLoader(double runSpeed){
         loaderMotor.set(ControlMode.PercentOutput, runSpeed); 
     }
@@ -100,7 +106,11 @@ public class Shooter extends Subsystem {
         integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
         integralTS = System.nanoTime();
 
-        return (error * kP) + (((target / 256) + 2.5) / 100);
+        return (error * kP) + (getDesiredShooterVoltage(target) / shooterMotor.getBusVoltage());
+    }
+
+    private double getDesiredShooterVoltage(double setpoint) {
+        return setpoint / shooterTicksPerVolt;
     }
 
     private double getCalibratedShooterSpeed(double distance) {
@@ -120,9 +130,9 @@ public class Shooter extends Subsystem {
 
         double tween = (distance - closestLower) / (closestUpper - closestLower);
 
-        System.out.println("Closest lower, upper: " + closestLower + ", " + closestUpper);
+        //System.out.println("Closest lower, upper: " + closestLower + ", " + closestUpper);
 
-        System.out.println("Tween: " + tween);
+        //System.out.println("Tween: " + tween);
 
 
         return shooterCalibration[closestLowerIndex][1] + (tween * (shooterCalibration[closestUpperIndex][1] - shooterCalibration[closestLowerIndex][1]));
@@ -160,7 +170,7 @@ public class Shooter extends Subsystem {
         loaderMotor = new TalonSRX(11);
         shooterMotor.setSelectedSensorPosition(0);
         shooterMotor.setSensorPhase(true);
-        shooterMotor.setInverted(false);
+        shooterMotor.setInverted(true);
         secondWheel.setInverted(true);
         secondWheel.setSensorPhase(true);
         loaderMotor.setInverted(false);
@@ -192,16 +202,16 @@ public class Shooter extends Subsystem {
     public void standby(boolean takeConfigOptions) {
         SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
         SmartDashboard.putNumber("secondWheelSpeed", secondWheel.getSelectedSensorVelocity());
-        SmartDashboard.putNumber("shooterCurrent", shooterMotor.getStatorCurrent());
+        SmartDashboard.putNumber("shooterCurrent", -shooterMotor.getStatorCurrent());
         SmartDashboard.putNumber("secondWheelCurrent", secondWheel.getStatorCurrent());
-        SmartDashboard.putNumber("shooterOut", shooterOut);
+        SmartDashboard.putNumber("shooterOut", -shooterOut);
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
         SmartDashboard.putBoolean("intakeLoaderEnabled", autoConditionSatisfied);
 
-        SmartDashboard.putNumber("shooterTarget", shooterTarget);
+        //SmartDashboard.putNumber("shooterTarget", shooterTarget);
 
         if(takeConfigOptions) {
-            //shooterTarget = SmartDashboard.getNumber("shooterTarget", 13000);
+            shooterTarget = SmartDashboard.getNumber("shooterTarget", 13000);
             secondWheelTarget = SmartDashboard.getNumber("shooterWheelTarget", -1.0);
         }
     }
@@ -212,9 +222,11 @@ public class Shooter extends Subsystem {
             if(mOperatorInputManager.getWestButtonPressed()) {
                 setShooterControlMode(ShooterControlMode.velocity);
                 if(mLimelightController.getShooterReady()) {
-                    shooterTarget = getCalibratedShooterSpeed(mLimelightController.getDistanceFinal());
+                    //double distance = mLimelightController.getDistanceFinal();
+                    //shooterTarget = getCalibratedShooterSpeed(distance);
+                    //System.out.println("Shooting at distance " + distance + " speed " + getCalibratedShooterSpeed(distance));
                 } else {
-                    shooterTarget = 9100;
+                    //shooterTarget = 9100;
                     System.out.println("[Shooter] Limelight not ready, setting default 170cm shot");
                 }
             } else if(mOperatorInputManager.getWestButtonReleased()) {
@@ -226,8 +238,9 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = -biasedShooterPID(shooterTarget, 0.000421, 0.00085); // (target, P, I) 0.00000540 good at 16,000
-                if(shooterOut > 0) {
+                shooterOut = biasedShooterPID(shooterTarget, 0.00028
+                , 0.00085); // (target, P, I) 0.00000540 good at 16,000
+                if(shooterOut < 0) {
                     shooterOut = 0;
                 }
                 shooterMotor.set(ControlMode.PercentOutput, shooterOut);
@@ -250,7 +263,7 @@ public class Shooter extends Subsystem {
                     loaderMotor.set(ControlMode.PercentOutput, 1);
                     autoConditionSatisfied = true;
                 } else {
-                    loaderMotor.set(ControlMode.PercentOutput, -0.1);
+                    loaderMotor.set(ControlMode.PercentOutput, 0);
                     autoConditionSatisfied = false;
                 }
                 break;
@@ -266,21 +279,28 @@ public class Shooter extends Subsystem {
                 shooterMotor.set(ControlMode.PercentOutput, -calibrationPercentage / 100);
                 if(System.currentTimeMillis() - lastCalibrationStageTS > 500) {
                     double cumulative = 0;
+                    double secondCumulative = 0;
                     for(int i = 0; i < 450; i++) {
                         cumulative += shooterMotor.getSelectedSensorVelocity();
+                        secondCumulative += secondWheel.getSelectedSensorVelocity();
                     }
+
                     double average = cumulative / 450;
-                    System.out.println("Shooter cal: " + calibrationPercentage + ":" + average);
+                    double secondAverage = secondCumulative / 450;
+                    double ticksPerVolt = average / shooterMotor.getMotorOutputVoltage();
+                    double secondTicksPerVolt = secondAverage / shooterMotor.getMotorOutputVoltage();
+                    System.out.println("Shooter cal: " + calibrationPercentage + ":" + average + ":" + ticksPerVolt);
+                    System.out.println("Second cal: " + calibrationPercentage + ":" + secondAverage + ":" + secondTicksPerVolt);
                     lastCalibrationStageTS = System.currentTimeMillis();
                     calibrationPercentage += 1;
-                    if(calibrationPercentage > 75) {
+                    if(calibrationPercentage > 50) {
                         setShooterControlMode(ShooterControlMode.none);
                     }
                 }
                 break;
             default:
                 shooterMotor.set(ControlMode.PercentOutput, 0.0);
-                loaderMotor.set(ControlMode.PercentOutput, -0.1);
+                loaderMotor.set(ControlMode.PercentOutput, 0);
                 secondWheel.set(ControlMode.PercentOutput, 0);
                 autoConditionSatisfied = false;
                 break;
