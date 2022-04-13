@@ -1,22 +1,29 @@
 package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.controllers.CalibratedVelocityController;
+import frc.robot.driver.TalonSRXDriver;
 
 public class Shooter extends Subsystem {
-    private SubsystemManager mSubsystemManager;
     private LimelightController mLimelightController;
     
     private InputManager mDriverInputManager;
     private InputManager mOperatorInputManager;
 
-    private TalonSRX shooterMotor; 
+    private MotorDriver mShooterDriver; 
+    private CalibratedVelocityController mShooterController;
+
+    private MotorDriver mSecondWheelDriver;
+    private CalibratedVelocityController mSecondWheelController;
+
     private TalonSRX loaderMotor;
-    private TalonSRX secondWheel;
+    
 
     private double shooterTarget = 13000;
-    private double secondWheelTarget = -1.0;
+    private double secondWheelTarget = 20000;
     private double shooterOut;
     private double lastCalibrationStageTS;
     private double calibrationPercentage;
@@ -38,15 +45,6 @@ public class Shooter extends Subsystem {
         {115, 7700},
     };
 
-    private double secondWheelCalibration[][] = { //distance(cm), main wheel speed
-        {440, -1.0},
-        {385, -0.6},
-        {336, -1.0},
-        {250, -1.0},
-        {170, -1.0},
-        {115, -1.0},
-    };
-
     public enum ShooterControlMode {
         velocity,
         direct,
@@ -62,14 +60,17 @@ public class Shooter extends Subsystem {
         switch (mode) {
             case velocity:
                 if(mShooterControlMode != ShooterControlMode.velocity) {
-                    integralError = 0;
-                    integralTS = System.nanoTime();
+                    mShooterController.prepare();
+                    mSecondWheelController.prepare();
                 }
                 break;
             case calibration:
                 lastCalibrationStageTS = System.currentTimeMillis();
                 calibrationPercentage = 1;
+                break;
             default:
+                mShooterDriver.disable();
+                mSecondWheelDriver.disable();
                 break;
         }
         mShooterControlMode = mode;
@@ -89,28 +90,6 @@ public class Shooter extends Subsystem {
 
     public void startShooterCalibration() {
         setShooterControlMode(ShooterControlMode.calibration);
-    }
-
-    private long integralTS;
-    private double integralError;
-    double shooterWheelSpeedToTicks(double centimetres){
-        double ticksPerRevolution = 8192;
-        double wheelSurcumfrenece = 30;
-        double ticksPerCentimetter = ticksPerRevolution / wheelSurcumfrenece;
-        return centimetres * ticksPerCentimetter;
-    }
-    private double biasedShooterPID(double target, double kP, double kI) {
-
-        double error = target - shooterMotor.getSelectedSensorVelocity();
-
-        integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
-        integralTS = System.nanoTime();
-
-        return (error * kP) + (getDesiredShooterVoltage(target) / shooterMotor.getBusVoltage());
-    }
-
-    private double getDesiredShooterVoltage(double setpoint) {
-        return setpoint / shooterTicksPerVolt;
     }
 
     private double getCalibratedShooterSpeed(double distance) {
@@ -138,24 +117,6 @@ public class Shooter extends Subsystem {
         return shooterCalibration[closestLowerIndex][1] + (tween * (shooterCalibration[closestUpperIndex][1] - shooterCalibration[closestLowerIndex][1]));
     }
 
-    private double shooterPID(double target, double kP, double kI) {
-        double error = target - shooterMotor.getSelectedSensorVelocity();
-
-        integralError += ((System.nanoTime() - integralTS) * error) / 10000000000d;
-        integralTS = System.nanoTime();
-
-        return (error * kP) + (integralError * kI);
-    }
-
-    private double secondWheelPID(double target, double kP, double kI) {
-        double error = target - secondWheel.getSelectedSensorVelocity();
-
-        integralError += ((System.nanoTime() - integralTS) * error) / 1000000000d;
-        integralTS = System.nanoTime();
-
-        return (error * kP) + (integralError * kI);
-    }
-
     public Shooter(InputManager inputManager, InputManager operatorInputManager, LimelightController limelightController) {
         mLimelightController = limelightController;
         mDriverInputManager = inputManager;
@@ -165,19 +126,28 @@ public class Shooter extends Subsystem {
     }
 
     public boolean init() {
-        shooterMotor = new TalonSRX(10);
-        secondWheel = new TalonSRX(22); //re-used the backleft climb controller FIXME: re-program BL climb id to 12
+        mShooterDriver = new TalonSRXDriver(10);
+        
+        mShooterDriver.setRelativePosition(0);
+        mShooterDriver.setEncoderInversion(true);
+        mShooterDriver.setDriverInversion(true);
+        
+        mShooterController = new CalibratedVelocityController(mShooterDriver, shooterTicksPerVolt);
+        mShooterController.setPIDConstants(0.00028, 0, 0);
+        
+        mSecondWheelDriver = new TalonSRXDriver(22); //re-used the backleft climb controller FIXME: re-program BL climb id to 12
+        
+        mSecondWheelDriver.setDriverInversion(true);
+        mSecondWheelDriver.setEncoderInversion(true);
+
+        mSecondWheelController = new CalibratedVelocityController(mSecondWheelDriver, 2050); //FIXME: second wheel ticks
+        
         loaderMotor = new TalonSRX(11);
-        shooterMotor.setSelectedSensorPosition(0);
-        shooterMotor.setSensorPhase(true);
-        shooterMotor.setInverted(true);
-        secondWheel.setInverted(true);
-        secondWheel.setSensorPhase(true);
+        
+        
         loaderMotor.setInverted(false);
 
-        shooterMotor.configOpenloopRamp(0);
-
-        mShooterControlMode = ShooterControlMode.none;
+        setShooterControlMode(ShooterControlMode.none);
 
         System.out.println("[Shooter] finished initialisation");
 
@@ -200,10 +170,10 @@ public class Shooter extends Subsystem {
     }
 
     public void standby(boolean takeConfigOptions) {
-        SmartDashboard.putNumber("shooterSpeed", shooterMotor.getSelectedSensorVelocity());
-        SmartDashboard.putNumber("secondWheelSpeed", secondWheel.getSelectedSensorVelocity());
-        SmartDashboard.putNumber("shooterCurrent", -shooterMotor.getStatorCurrent());
-        SmartDashboard.putNumber("secondWheelCurrent", secondWheel.getStatorCurrent());
+        SmartDashboard.putNumber("shooterSpeed", mShooterDriver.getVelocity());
+        SmartDashboard.putNumber("secondWheelSpeed", mSecondWheelDriver.getVelocity());
+        SmartDashboard.putNumber("shooterCurrent", mShooterDriver.getOutputCurrent());
+        SmartDashboard.putNumber("secondWheelCurrent", mSecondWheelDriver.getOutputCurrent());
         SmartDashboard.putNumber("shooterOut", -shooterOut);
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
         SmartDashboard.putBoolean("intakeLoaderEnabled", autoConditionSatisfied);
@@ -212,7 +182,7 @@ public class Shooter extends Subsystem {
 
         if(takeConfigOptions) {
             shooterTarget = SmartDashboard.getNumber("shooterTarget", 13000);
-            secondWheelTarget = SmartDashboard.getNumber("shooterWheelTarget", -1.0);
+            secondWheelTarget = SmartDashboard.getNumber("secondWheelTarget", 20000);
         }
     }
 
@@ -222,9 +192,9 @@ public class Shooter extends Subsystem {
             if(mOperatorInputManager.getWestButtonPressed()) {
                 setShooterControlMode(ShooterControlMode.velocity);
                 if(mLimelightController.getShooterReady()) {
-                    //double distance = mLimelightController.getDistanceFinal();
-                    //shooterTarget = getCalibratedShooterSpeed(distance);
-                    //System.out.println("Shooting at distance " + distance + " speed " + getCalibratedShooterSpeed(distance));
+                    double distance = mLimelightController.getDistanceFinal();
+                    shooterTarget = getCalibratedShooterSpeed(distance);
+                    System.out.println("Shooting at distance " + distance + " speed " + getCalibratedShooterSpeed(distance));
                 } else {
                     //shooterTarget = 9100;
                     System.out.println("[Shooter] Limelight not ready, setting default 170cm shot");
@@ -238,18 +208,13 @@ public class Shooter extends Subsystem {
 
         switch (mShooterControlMode) {
             case velocity:
-                shooterOut = biasedShooterPID(shooterTarget, 0.00028
-                , 0.00085); // (target, P, I) 0.00000540 good at 16,000
-                if(shooterOut < 0) {
-                    shooterOut = 0;
-                }
-                shooterMotor.set(ControlMode.PercentOutput, shooterOut);
-                //double secondWheelOut = secondWheelPID(21000, 0.00001, 0);
-                double secondWheelOut = -0.6; //good at 0.6 for launchpad
-                secondWheel.set(ControlMode.PercentOutput, secondWheelTarget);
-                //shooterMotor.set(ControlMode.PercentOutput, secondWheelOut);
+                mShooterController.setVelocityDemand(shooterTarget);
+                mShooterController.refresh();
 
-                if(Math.abs(shooterTarget - shooterMotor.getSelectedSensorVelocity()) < 150) {
+                mSecondWheelController.setVelocityDemand(secondWheelTarget);
+                mSecondWheelController.refresh();
+
+                if(Math.abs(shooterTarget - mShooterDriver.getVelocity()) < 150) {
                     if(!shooterWheelStable) {
                         shooterWheelStable = true;
                         stabilityTS = System.currentTimeMillis();
@@ -268,7 +233,7 @@ public class Shooter extends Subsystem {
                 }
                 break;
             case direct:
-                shooterMotor.set(ControlMode.PercentOutput, -0.7);
+                mShooterDriver.set(-0.7);
                 /*if(mDriverInputManager.getWestButton()) {
                     loaderMotor.set(ControlMode.PercentOutput, 0.08);
                 } else {
@@ -276,19 +241,19 @@ public class Shooter extends Subsystem {
                 }*/
                 break;
             case calibration:
-                shooterMotor.set(ControlMode.PercentOutput, -calibrationPercentage / 100);
+                mShooterDriver.set(calibrationPercentage / 100);
                 if(System.currentTimeMillis() - lastCalibrationStageTS > 500) {
                     double cumulative = 0;
                     double secondCumulative = 0;
                     for(int i = 0; i < 450; i++) {
-                        cumulative += shooterMotor.getSelectedSensorVelocity();
-                        secondCumulative += secondWheel.getSelectedSensorVelocity();
+                        cumulative += mShooterDriver.getVelocity();
+                        secondCumulative += mSecondWheelDriver.getVelocity();
                     }
 
                     double average = cumulative / 450;
                     double secondAverage = secondCumulative / 450;
-                    double ticksPerVolt = average / shooterMotor.getMotorOutputVoltage();
-                    double secondTicksPerVolt = secondAverage / shooterMotor.getMotorOutputVoltage();
+                    double ticksPerVolt = average / mShooterDriver.getOutputVoltage();
+                    double secondTicksPerVolt = secondAverage / mSecondWheelDriver.getOutputVoltage();
                     System.out.println("Shooter cal: " + calibrationPercentage + ":" + average + ":" + ticksPerVolt);
                     System.out.println("Second cal: " + calibrationPercentage + ":" + secondAverage + ":" + secondTicksPerVolt);
                     lastCalibrationStageTS = System.currentTimeMillis();
@@ -299,9 +264,7 @@ public class Shooter extends Subsystem {
                 }
                 break;
             default:
-                shooterMotor.set(ControlMode.PercentOutput, 0.0);
                 loaderMotor.set(ControlMode.PercentOutput, 0);
-                secondWheel.set(ControlMode.PercentOutput, 0);
                 autoConditionSatisfied = false;
                 break;
         }
