@@ -191,9 +191,9 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         //meta stuff
         this.mDriverInputManager = inputManager;
         this.navX = navX;
-        SmartDashboard.putNumber("angleP", 0.046); //0.03
+        SmartDashboard.putNumber("angleP", 0.026); //0.046
         SmartDashboard.putNumber("angleP2", 0.0104);
-        SmartDashboard.putNumber("angleI", 0.0/*115*/);
+        SmartDashboard.putNumber("angleI", 0./*0115*/);
         SmartDashboard.putNumber("angleD", 150000.0); //subtracted the longer you run
         SmartDashboard.putNumber("distanceP", 0.046);
         SmartDashboard.putBoolean("AutoConditionSatisfied", autoConditionSatisfied);
@@ -318,7 +318,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         SmartDashboard.putString("autoGuidanceMode", mAutoMode.toString());
 
         if(takeConfigOptions) {
-            angleP = SmartDashboard.getNumber("angleP", 0.0015);
+            angleP = SmartDashboard.getNumber("angleP", 0.0015); 
             angleP2 = SmartDashboard.getNumber("angleP2", 0.0104);
             angleI = SmartDashboard.getNumber("angleI", 0.00084);
             angleD = SmartDashboard.getNumber("angleD", 0.0);
@@ -385,7 +385,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     //
                     y = 0;
 
-                    autoConditionSatisfied = (Math.abs(delta) < 1.0) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
+                    autoConditionSatisfied = (Math.abs(delta) < 2) && (Math.abs(navX.getRate()) < 0.02); //auto is satisfied if almost still
                     break;
 
                 case distance:

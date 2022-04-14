@@ -52,6 +52,7 @@ public class Robot extends TimedRobot {
     mLimelightController.init();
 
     mShooter.init();
+    mClimb.init();
     //pneumatics = new PneumaticController(driverStick);
   }
 
@@ -64,6 +65,7 @@ public class Robot extends TimedRobot {
     mRealTimeDrive.standby(true);
     mIntake.standby(true);
     mLimelightController.standby(false);
+    mClimb.standby(false);
     mShooter.manager.checkStatus();
     mShooter.manager.publishStatus();
     mShooter.standby(true);

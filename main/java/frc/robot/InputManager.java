@@ -113,6 +113,19 @@ public class InputManager {
         return false;
     }
 
+    boolean getRightBumperReleased() {
+        switch (mControllerType) {
+            case PS5:
+                return mStick.getRawButtonReleased(6);
+            case logitechAnalog:
+                return mStick.getRawButtonReleased(6); //TODO:logitech analog right bumper
+            case logitechDigital:
+                return mStick.getRawButtonReleased(6);
+        }
+        return false;
+    }
+
+
     boolean getLeftBumper() {
         switch (mControllerType) {
             case PS5:

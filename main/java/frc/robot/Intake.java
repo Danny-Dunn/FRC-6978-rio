@@ -52,7 +52,7 @@ public class Intake implements Runnable, ServiceableModule{
 
     NetworkTable simTable;
 
-    double intakeFullOutPosition = 950;
+    double intakeFullOutPosition = 1100;
     static double intakeParkPosition = -463;
     double intakeTicksPerRadian = 651.8986469;
     double intakeUpperPosition = -463; // should be -82
@@ -227,7 +227,7 @@ public class Intake implements Runnable, ServiceableModule{
                 } else if(mOperatorInputManager.getNorthButtonReleased()) {
                     setRollers(RollerMode.direct, 0);
                 }
-                if(mOperatorInputManager.getRightBumper()) {
+                if(mOperatorInputManager.getRightTriggerDigital()) {
                     calibrateIntake();
                 }
             }
@@ -299,13 +299,15 @@ public class Intake implements Runnable, ServiceableModule{
                     liftOut = (liftOut < -0.29)? -0.29 : liftOut;
 
                     if(intakeTargetPosition == intakeParkPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeTargetPosition < 350) {
-                        liftOut = -0.10;
+                        liftOut = -0.07;
                     } else if(intakeTargetPosition == intakeFullOutPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeParkPosition < 400) {
-                        liftOut = 0.25;
+                        liftOut = 0.30;
                     } else if(intakeTargetPosition == intakeFullOutPosition)  {
                         if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
-                            liftOut = 0.08;
+                            liftOut = 0.07;
                         }
+                    } else if(intakeTargetPosition == intakeParkPosition && Math.abs(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition) < 400) {
+                        liftOut = -0.35;
                     }
                     break;
                 case direct:

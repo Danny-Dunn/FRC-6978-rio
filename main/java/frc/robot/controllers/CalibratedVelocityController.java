@@ -74,4 +74,8 @@ public class CalibratedVelocityController {
     public void refresh() {
         mDriver.set(getPIDDemand() + getCalibratedDemand(velocityDemand));
     }
+
+    public void calibrate() {
+
+    }
 }

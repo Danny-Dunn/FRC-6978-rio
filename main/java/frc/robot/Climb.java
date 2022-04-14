@@ -29,9 +29,9 @@ public class Climb implements Runnable, ServiceableModule {
     double pullingPower = -0.5;
     
     double pushingPower = 0.2;
-    double fastPushingPower = 0.4;
+    double fastPushingPower = 0.5;
 
-    double highPosition = 15000;
+    double highPosition = 9000;
 
     public Climb(InputManager inputManager) {
         mOperatorInputManager = inputManager;
@@ -111,6 +111,8 @@ public class Climb implements Runnable, ServiceableModule {
         SmartDashboard.putNumber("CFR Current", CFRMotor.getStatorCurrent());
         //SmartDashboard.putNumber("CBL Current", CBLMotor.getStatorCurrent());
         //SmartDashboard.putNumber("CBR Current", CBRMotor.getStatorCurrent());
+        SmartDashboard.putNumber("CFR Position", CFRMotor.getSelectedSensorPosition());
+        SmartDashboard.putNumber("CFL Position", CFLMotor.getSelectedSensorPosition());
     }
 
     public boolean exitFlag; //this flag is set true when the loop is to be exited
@@ -172,15 +174,13 @@ public class Climb implements Runnable, ServiceableModule {
             
             if(mOperatorInputManager.getLeftTriggerDigital()){ //front pull 
                 frontState = true;
-                extendLeftArm();
-                extendRightArm();
+                climbArms();
             } else if (mOperatorInputManager.getLeftBumper()) { //front release
                 frontState = false;
-                CFLMotor.set(ControlMode.PercentOutput, pushingPower);
-                CFRMotor.set(ControlMode.PercentOutput, pushingPower);
+                extendLeftArm();
+                extendRightArm();
             } else if (frontState) { //apply bias
-                CFLMotor.set(ControlMode.PercentOutput, holdingBias);
-                CFRMotor.set(ControlMode.PercentOutput, holdingBias);
+                holdArms();
             }
             else {
                 CFLMotor.set(ControlMode.PercentOutput, 0);

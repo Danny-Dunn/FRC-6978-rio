@@ -82,7 +82,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
         },
 
         { //shoot, back up
-            new AutoCommand(CommandType.SetShooter, 1, 1), 
+            new AutoCommand(CommandType.SetShooter, 7000, 1), 
             new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
             new AutoCommand(CommandType.SetShooter, 0, 0),
             new AutoCommand(CommandType.DriveDistance, -200, 0),
@@ -116,7 +116,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
 
         { //pick up ball, spin, shoot
             //new AutoCommand(CommandType.RotateToAngle, -2, 0),
-            new AutoCommand(CommandType.SetIntake, 950, 0.45),
+            new AutoCommand(CommandType.SetIntake, 1100, 0.45),
             new AutoCommand(CommandType.Delay, 650, 0),
             new AutoCommand(CommandType.DriveDistance, 190, 0),
             new AutoCommand(CommandType.Delay, 400, 0),
@@ -127,8 +127,12 @@ public class AutonomousController implements Runnable, ServiceableModule {
             new AutoCommand(CommandType.RotateToAngle, 182, 0),
             new AutoCommand(CommandType.DriveDistance, 50, 0),
             //new AutoCommand(CommandType.RotateToAngle, -20, 0), //realignment
-            new AutoCommand(CommandType.SetShooter, 1, 1), 
+            new AutoCommand(CommandType.SetShooter, 9100, 1), 
             new AutoCommand(CommandType.Delay, 1500, 0), //wait while it fires
+            new AutoCommand(CommandType.SetIntake, Intake.getParkPosition(), 0.4),
+            new AutoCommand(CommandType.Delay, 500, 0), //wait while it fires
+            new AutoCommand(CommandType.SetIntake, Intake.getParkPosition(), 0.),
+            new AutoCommand(CommandType.Delay, 700, 0), //wait while it fires
             new AutoCommand(CommandType.SetShooter, 0, 0),
         },
 
@@ -234,6 +238,7 @@ public class AutonomousController implements Runnable, ServiceableModule {
                             //set shooter
                             if(commands[autoSequence][pointNum].aparam != 0) {
                                 mShooter.setShooterControlMode(ShooterControlMode.velocity);
+                                mShooter.setShooterSpeed(commands[autoSequence][pointNum].aparam);
                             } else {
                                 mShooter.setShooterControlMode(ShooterControlMode.none);
                             }

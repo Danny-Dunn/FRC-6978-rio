@@ -34,15 +34,15 @@ public class Shooter extends Subsystem {
     private long stabilityTS;
     private boolean shooterWheelStable;
 
-    private double shooterTicksPerVolt = 2050;
+    private double shooterTicksPerVolt = 2080;
 
     private double shooterCalibration[][] = { //distance(cm), main wheel speed
-        {440, 15800},
-        {385, 14500},
-        {336, 13500},
-        {250, 10500},
-        {170, 8900},
-        {115, 7700},
+        {380, 12800},
+        {310, 10000},
+        {260, 8550},
+        {210, 7000},
+        {170, 6400},
+        {135, 6150},
     };
 
     public enum ShooterControlMode {
@@ -78,6 +78,8 @@ public class Shooter extends Subsystem {
 
     public void setShooterSpeed(double shooterSpeed) {
         shooterTarget = shooterSpeed;
+        mShooterController.setVelocityDemand(shooterSpeed);
+        mSecondWheelController.setVelocityDemand(secondWheelTarget);
     }
 
     public void runLoader(double runSpeed){
@@ -129,19 +131,19 @@ public class Shooter extends Subsystem {
         mShooterDriver = new TalonSRXDriver(10);
         
         mShooterDriver.setRelativePosition(0);
-        mShooterDriver.setEncoderInversion(true);
+        mShooterDriver.setEncoderInversion(false);
         mShooterDriver.setDriverInversion(true);
         
         mShooterController = new CalibratedVelocityController(mShooterDriver, shooterTicksPerVolt);
-        mShooterController.setPIDConstants(0.00028, 0, 0);
+        mShooterController.setPIDConstants(0.00020, 0, 10);
         
         mSecondWheelDriver = new TalonSRXDriver(22); //re-used the backleft climb controller FIXME: re-program BL climb id to 12
         
-        mSecondWheelDriver.setDriverInversion(true);
-        mSecondWheelDriver.setEncoderInversion(true);
+        mSecondWheelDriver.setDriverInversion(false);
+        mSecondWheelDriver.setEncoderInversion(false);
 
-        mSecondWheelController = new CalibratedVelocityController(mSecondWheelDriver, 2050); //FIXME: second wheel calibration
-        mSecondWheelController.setPIDConstants(0, 0, 0); //FIXME: determine PID constants for second wheel
+        mSecondWheelController = new CalibratedVelocityController(mSecondWheelDriver, 2000); //FIXME: second wheel calibration
+        mSecondWheelController.setPIDConstants(0.00004, 0, 40); //FIXME: determine PID constants for second wheel
 
         loaderMotor = new TalonSRX(11);
         
@@ -179,10 +181,13 @@ public class Shooter extends Subsystem {
         SmartDashboard.putString("shooterControlMode", mShooterControlMode.toString());
         SmartDashboard.putBoolean("intakeLoaderEnabled", autoConditionSatisfied);
 
-        //SmartDashboard.putNumber("shooterTarget", shooterTarget);
+        SmartDashboard.putNumber("shooterDesiredVoltage", mShooterController.getDesiredVoltage(shooterTarget));
+        SmartDashboard.putNumber("shooterPIDDemand", mShooterController.getPIDDemand());
+
+        SmartDashboard.putNumber("shooterTarget", shooterTarget);
 
         if(takeConfigOptions) {
-            shooterTarget = SmartDashboard.getNumber("shooterTarget", 13000);
+            //shooterTarget = SmartDashboard.getNumber("shooterTarget", 13000);
             secondWheelTarget = SmartDashboard.getNumber("secondWheelTarget", 20000);
         }
     }
@@ -195,24 +200,33 @@ public class Shooter extends Subsystem {
                 if(mLimelightController.getShooterReady()) {
                     double distance = mLimelightController.getDistanceFinal();
                     shooterTarget = getCalibratedShooterSpeed(distance);
+                    mShooterController.setVelocityDemand(shooterTarget);
                     System.out.println("Shooting at distance " + distance + " speed " + getCalibratedShooterSpeed(distance));
                 } else {
                     //shooterTarget = 9100;
                     System.out.println("[Shooter] Limelight not ready, setting default 170cm shot");
                 }
-            } else if(mOperatorInputManager.getWestButtonReleased()) {
+                mShooterController.setVelocityDemand(shooterTarget);
+                mSecondWheelController.setVelocityDemand(secondWheelTarget);
+            } else if(mOperatorInputManager.getWestButtonReleased() || mOperatorInputManager.getEastButtonReleased() || mOperatorInputManager.getRightBumperReleased()) {
                 setShooterControlMode(ShooterControlMode.none);
             } else if(mOperatorInputManager.getEastButtonPressed()) {
-                startShooterCalibration();;
+                mShooterController.setVelocityDemand(7000);
+                shooterTarget = 7000;
+                setShooterControlMode(ShooterControlMode.velocity);
+                mSecondWheelController.setVelocityDemand(secondWheelTarget);
+            } else if(mOperatorInputManager.getRightBumperPressed()) {
+                mShooterController.setVelocityDemand(12662);
+                shooterTarget = 12662;
+                setShooterControlMode(ShooterControlMode.velocity);
+                mSecondWheelController.setVelocityDemand(secondWheelTarget);
             }
         }
 
         switch (mShooterControlMode) {
             case velocity:
-                mShooterController.setVelocityDemand(shooterTarget);
                 mShooterController.refresh();
-
-                mSecondWheelController.setVelocityDemand(secondWheelTarget);
+                
                 mSecondWheelController.refresh();
 
                 if(Math.abs(shooterTarget - mShooterDriver.getVelocity()) < 150) {
