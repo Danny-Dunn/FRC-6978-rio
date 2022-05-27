@@ -345,7 +345,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             advanceTracking();
 
             if(mDriverInputManager.getRightSystemButton()) {
-                calibrateTracking(true);
+                //calibrateTracking(true);
             }
 
             if(mDriverInputManager.getLeftSystemButtonPressed()) {
@@ -362,7 +362,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             double deltaT;
 
             double deadZone = 0.2;
-            double fullSpeed = 1.0;
+            double fullSpeed = 1;
 
             double x = 0.0;
             double y = 0.0;
@@ -443,7 +443,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     x = x / (1 - deadZone);
                     simOut("xval", x);
 
-                    double aparam = 0.6;
+                    double aparam = 0.8;
 
                     x = (aparam * (x * x * x)) + ((1-aparam) * x);
                     

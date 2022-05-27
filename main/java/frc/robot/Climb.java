@@ -19,7 +19,7 @@ public class Climb implements Runnable, ServiceableModule {
 
     TalonSRX RightHookRotateMotor;
 
-
+    
     double catchPoint = -111; //point at which the lift is considered up and should begin bias power
     boolean frontState;
     boolean backState;

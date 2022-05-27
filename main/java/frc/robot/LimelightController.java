@@ -92,7 +92,7 @@ public class LimelightController implements ServiceableModule, Runnable {
     }
 
     double cameraAngleToDistance(double camY) {
-        double angle = camY + 39;
+        double angle = camY + 28; //39
         return targetHeight / Math.tan(Math.toRadians(angle));
     }
 

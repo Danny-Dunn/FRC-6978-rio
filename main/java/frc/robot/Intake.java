@@ -121,7 +121,7 @@ public class Intake implements Runnable, ServiceableModule{
     public void calibrateIntake() {
         System.out.println("[Intake] Pulling mechanism for calibration");
         intakeLiftMotor.set(ControlMode.PercentOutput, -0.2);
-        try {Thread.sleep(700);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
+        try {Thread.sleep(500);} catch (InterruptedException ie) {} //deliberately only updates around 200hz
         intakeLiftMotor.setSelectedSensorPosition(intakeUpperPosition);
         System.out.println("[Intake] Finished encoder calibration");
         intakeLiftMotor.set(ControlMode.PercentOutput, 0);
@@ -205,11 +205,13 @@ public class Intake implements Runnable, ServiceableModule{
         intakeTargetPosition = intakeParkPosition;
         long lastCalcTS = System.nanoTime();
         System.out.println("[Intake] entered independent service");
-        mOperatorInputManager.getRightBumperPressed();
-        mOperatorInputManager.getSouthButtonPressed();
-        mOperatorInputManager.getSouthButtonReleased();
-        mOperatorInputManager.getNorthButtonReleased();
-        mOperatorInputManager.getNorthButtonPressed();
+        if(!auto) {
+            mOperatorInputManager.getRightBumperPressed();
+            mOperatorInputManager.getSouthButtonPressed();
+            mOperatorInputManager.getSouthButtonReleased();
+            mOperatorInputManager.getNorthButtonReleased();
+            mOperatorInputManager.getNorthButtonPressed();
+        }
         while(!exitFlag) {
             double rollerOut = 0.0;
             
@@ -227,9 +229,9 @@ public class Intake implements Runnable, ServiceableModule{
                 } else if(mOperatorInputManager.getNorthButtonReleased()) {
                     setRollers(RollerMode.direct, 0);
                 }
-                if(mOperatorInputManager.getRightTriggerDigital()) {
+                /*if(mOperatorInputManager.getRightTriggerDigital()) {
                     calibrateIntake();
-                }
+                }*/
             }
             
             switch (mRollerMode) {
@@ -279,7 +281,7 @@ public class Intake implements Runnable, ServiceableModule{
                             if(y != 0.0) y = (y > 0.0)? y - IntakeConfig.deadZone : y + IntakeConfig.deadZone; //eliminate jump behaviour
                             y = y / (1 - IntakeConfig.deadZone); 
 
-                            intakeTargetPosition += y * deltaT * IntakeConfig.intakeFineAdjustSpeed;
+                            //intakeTargetPosition += y * deltaT * IntakeConfig.intakeFineAdjustSpeed;
                         }
                         
                         if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
@@ -300,8 +302,8 @@ public class Intake implements Runnable, ServiceableModule{
 
                     if(intakeTargetPosition == intakeParkPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeTargetPosition < 350) {
                         liftOut = -0.07;
-                    } else if(intakeTargetPosition == intakeFullOutPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeParkPosition < 400) {
-                        liftOut = 0.30;
+                    } else if(intakeTargetPosition == intakeFullOutPosition && intakeLiftMotor.getSelectedSensorPosition() - intakeParkPosition < 500) {
+                        liftOut = 0.40;
                     } else if(intakeTargetPosition == intakeFullOutPosition)  {
                         if(intakeLiftMotor.getSelectedSensorPosition() - intakeFullOutPosition <= 400) {
                             liftOut = 0.07;
