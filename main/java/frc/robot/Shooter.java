@@ -23,8 +23,8 @@ public class Shooter extends Subsystem {
     private TalonSRX loaderMotor;
     
 
-    private double shooterTarget = 13000;
-    private double secondWheelTarget = 20000;
+    private double shooterTarget = 500;
+    private double secondWheelTarget = 10000;
     private double shooterOut;
     private double lastCalibrationStageTS;
     private double calibrationPercentage;
@@ -193,7 +193,7 @@ public class Shooter extends Subsystem {
         //SmartDashboard.putNumber("shooterTarget", shooterTarget);
 
         if(takeConfigOptions) {
-            //setShooterSpeed(SmartDashboard.getNumber("shooterTarget", 13000)); //FIXME: 
+            setShooterSpeed(SmartDashboard.getNumber("shooterTarget", 500)); //FIXME: 
             secondWheelTarget = SmartDashboard.getNumber("secondWheelTarget", 20000);
         }
     }
@@ -217,7 +217,7 @@ public class Shooter extends Subsystem {
             } else*/ if(/*mOperatorInputManager.getWestButtonReleased() ||*/ mDriverInputManager.getEastButtonReleased() /*|| mOperatorInputManager.getRightBumperReleased()*/) {
                 setShooterControlMode(ShooterControlMode.none);
             } else if(mDriverInputManager.getEastButtonPressed()) {
-                setShooterSpeed(500); //8200
+                //setShooterSpeed(500); //8200
                 setShooterControlMode(ShooterControlMode.velocity);
                 mSecondWheelController.setVelocityDemand(secondWheelTarget);
             } /*else if(mOperatorInputManager.getRightBumperPressed()) {
@@ -252,12 +252,9 @@ public class Shooter extends Subsystem {
                 }
                 break;
             case direct:
-                mShooterDriver.set(-0.7);
-                /*if(mDriverInputManager.getWestButton()) {
-                    loaderMotor.set(ControlMode.PercentOutput, 0.08);
-                } else {
-                    loaderMotor.set(ControlMode.PercentOutput, 0);
-                }*/
+                mShooterDriver.set(0.35);
+                loaderMotor.set(ControlMode.PercentOutput, 0.8);
+                mSecondWheelDriver.set(0.5);
                 break;
             case calibration:
                 mShooterDriver.set(calibrationPercentage / 100);
