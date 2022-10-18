@@ -25,7 +25,7 @@ public class Intake implements Runnable, ServiceableModule{
         public static double rollerOutSpeed = -0.35;
         public static double rollerInSpeed = 0.45;
         public static RollerMode defaultRollerMode = RollerMode.direct;
-        public static LiftMode defaultLiftMode = LiftMode.position;
+        public static LiftMode defaultLiftMode = LiftMode.direct;
     }
 
     enum RollerMode {
@@ -315,7 +315,7 @@ public class Intake implements Runnable, ServiceableModule{
                 case direct:
                     if(!auto) {
                         if(mOperatorInputManager.getPOV() == 0) { //set the intake forward
-                            liftOut = 0.4;
+                            liftOut = 0.2;
                             targetState = true;
                         } else if(mOperatorInputManager.getPOV() == 180) {
                             liftOut = -0.4;
