@@ -50,6 +50,8 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
     double delta; //generic delta variable used for BOTH position and angle
     AHRS navX;
 
+    double fullSpeed = 0.4;
+
     double angleOffset;
 
     public enum AutoMode {
@@ -237,6 +239,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
         mDriverInputManager.map();
 
         System.out.println("[RTDrive] finished initialisation");
+        SmartDashboard.putNumber("fullSpeed", fullSpeed);
         return true; //everything went fine??
     }
 
@@ -323,6 +326,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             angleI = SmartDashboard.getNumber("angleI", 0.00084);
             angleD = SmartDashboard.getNumber("angleD", 0.0);
             distanceP = SmartDashboard.getNumber("distanceP", 0.0045);
+            fullSpeed = SmartDashboard.getNumber("fullSpeed", 0.5);
         }
     }
 
@@ -362,7 +366,7 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
             double deltaT;
 
             double deadZone = 0.2;
-            double fullSpeed = 1;
+            
 
             double x = 0.0;
             double y = 0.0;
@@ -443,10 +447,10 @@ public class RealTimeDrive implements Runnable, ServiceableModule {
                     x = x / (1 - deadZone);
                     simOut("xval", x);
 
-                    double aparam = 0.8;
+                    double aparam = 0.2;
 
-                    x = (aparam * (x * x * x)) + ((1-aparam) * x);
-                    
+                    //x = (aparam * (x * x * x)) + ((1-aparam) * x);
+                    x = x*0.5;
                     //y = (y < deadZone && y > -deadZone)? 0 : y;
                     //if(y != 0.0) y = (y > 0.0)? y - deadZone : y + deadZone; //eliminate jump behaviour
                     //y = y / (1 - deadZone);
